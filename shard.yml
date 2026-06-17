@@ -1,0 +1,21 @@
+name: crystal_ui
+version: 0.1.0
+
+authors:
+  - CrystalUI Contributors
+
+description: |
+  CrystalUI — host-shim UI framework. Crystal Host owns state and logic;
+  native code is a thin shim that exposes OS APIs to Crystal.
+
+license: MIT
+
+crystal: ">= 1.10.0"
+
+targets:
+  crystal-ui-hello:
+    main: examples/hello.cr
+
+dependencies: {}
+
+dev_dependencies: {}

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="crystalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="crystalHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0.4"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Outer glow -->
+  <polygon points="64,8 112,36 112,92 64,120 16,92 16,36" fill="url(#crystalGradient)" opacity="0.3" filter="url(#glow)"/>
+
+  <!-- Main crystal body -->
+  <polygon points="64,8 112,36 112,92 64,120 16,92 16,36" fill="url(#crystalGradient)"/>
+
+  <!-- Top facet -->
+  <polygon points="64,8 88,44 64,56 40,44" fill="url(#crystalHighlight)"/>
+
+  <!-- Center vertical facet -->
+  <polygon points="64,56 88,44 88,84 64,96" fill="#2563eb"/>
+
+  <!-- Left facet -->
+  <polygon points="64,56 40,44 40,84 64,96" fill="#1e40af"/>
+
+  <!-- Bottom highlight -->
+  <polygon points="64,96 88,84 112,92 64,120 16,92 40,84" fill="#1e3a8a"/>
+
+  <!-- Sparkle -->
+  <circle cx="52" cy="36" r="4" fill="white" opacity="0.8"/>
+</svg>

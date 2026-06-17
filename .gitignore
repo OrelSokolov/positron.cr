@@ -1,0 +1,7 @@
+.crystal/
+*.tar.gz
+/examples/hello
+/lib/
+/.shards/
+*.dwarf
+/.env
