@@ -35,10 +35,14 @@ module CrystalUI
         end
 
         def create
-          @indicator = LibAppIndicator.app_indicator_new(
-            "crystal-ui",
-            "",
-            APP_INDICATOR_CATEGORY_APPLICATION_STATUS
+          # Use g_object_new(APP_INDICATOR_TYPE, ...) instead of the deprecated
+          # app_indicator_new(), matching getlantern/systray's fix.
+          @indicator = LibGObject.g_object_new(
+            LibAppIndicator.app_indicator_get_type,
+            "id", "crystal-ui",
+            "category", "ApplicationStatus",
+            "icon-name", "",
+            Pointer(Void).null
           )
           @menu = LibGTK.gtk_menu_new
           LibAppIndicator.app_indicator_set_menu(@indicator, @menu)
@@ -297,7 +301,7 @@ module CrystalUI
           APP_INDICATOR_STATUS_ACTIVE    = 1
           APP_INDICATOR_STATUS_ATTENTION = 2
 
-          fun app_indicator_new(id : LibC::Char*, icon_name : LibC::Char*, category : Int32) : Void*
+          fun app_indicator_get_type : UInt64
           fun app_indicator_set_status(self : Void*, status : Int32)
           fun app_indicator_set_menu(self : Void*, menu : Void*)
           fun app_indicator_set_icon_full(self : Void*, icon_name : LibC::Char*, icon_desc : LibC::Char*)
@@ -331,6 +335,8 @@ module CrystalUI
 
         @[Link("gobject-2.0")]
         lib LibGObject
+          fun g_object_new(object_type : UInt64, ...) : Void*
+
           fun g_signal_connect_data(
             instance : Void*,
             detailed_signal : LibC::Char*,
