@@ -2,7 +2,6 @@ require "uri"
 require "json"
 require "time"
 require "../../src/crystal_ui"
-require "../../src/crystal_ui/plugins/logger"
 
 # Example plugin demonstrating the RailsWay architecture:
 # - explicit command binding via bind()
@@ -74,23 +73,22 @@ class HelloApp < CrystalUI::Application
   end
 
   def on_ready
-    webview.create(
+    webview.create(CrystalUI::WebViewConfig.new(
       title: "CrystalUI",
       width: 900,
       height: 640,
-      icon_path: icon_path
-    )
+      icon: icon_source(:svg)
+    ))
 
     webview.bind("crystal") do |json|
       STDOUT.puts "[Crystal Host] received from JS: #{json}"
       STDOUT.flush
-      CrystalUI::EventBus.emit("command.invoked", JSON.parse(json))
-      ""
+      host.dispatch(json)
     end
 
-    webview.navigate("data:text/html,#{URI.encode_path(application_html)}")
+    webview.load_html(application_html)
 
-    tray.set_icon(icon_bytes)
+    tray.set_icon(icon_source(:svg))
     tray.set_title("CrystalUI")
     tray.add_or_update_item(CrystalUI::TrayItem.new(id: 1, title: "Open"))
     tray.add_or_update_item(CrystalUI::TrayItem.new(id: 2, title: "Quit"))

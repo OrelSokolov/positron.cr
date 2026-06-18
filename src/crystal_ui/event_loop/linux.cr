@@ -9,7 +9,7 @@ module CrystalUI
   # This keeps the implementation self-contained (no external libuv shard)
   # while still satisfying the design goal: a unified dispatcher that lets
   # Crystal fibers and the native GUI loop coexist.
-  class EventLoop::Linux
+  class EventLoop::Linux < EventLoopPort
     @running = false
     @webview : WebViewPort
 
@@ -43,21 +43,41 @@ module CrystalUI
       @running = false
       LibGTK.gtk_main_quit
     end
-  end
 
-  # Minimal GLib bindings required by the Linux event loop and adapters.
-  @[Link("glib-2.0")]
-  lib LibGLib
-    G_PRIORITY_DEFAULT_IDLE = 200
+    def running? : Bool
+      @running
+    end
 
-    fun g_idle_add_full(priority : Int32, func : Void* -> Int32, data : Void*, notify : Void*) : UInt32
-    fun g_free(mem : Void*)
-  end
+    # Schedule a block on the GTK main thread.
+    def run_on_main(&block : ->) : Nil
+      # g_idle_add is thread-safe and runs the callback on the main loop.
+      Box.box(block).tap do |box|
+        LibGLib.g_idle_add(
+          ->(ptr : Void*) {
+            cb = Box(Proc(Nil)).unbox(ptr)
+            cb.call
+            0 # G_SOURCE_REMOVE
+          }.pointer.as(Void*),
+          box
+        )
+      end
+    end
 
-  # Minimal GTK binding for initialization and quitting the main loop.
-  @[Link("gtk-3")]
-  lib LibGTK
-    fun gtk_init(argc : Int32*, argv : Void**)
-    fun gtk_main_quit
+    # Minimal GLib bindings required by the Linux event loop and adapters.
+    @[Link("glib-2.0")]
+    lib LibGLib
+      G_PRIORITY_DEFAULT_IDLE = 200
+
+      fun g_idle_add_full(priority : Int32, func : Void* -> Int32, data : Void*, notify : Void*) : UInt32
+      fun g_idle_add(func : Void*, data : Void*) : UInt32
+      fun g_free(mem : Void*)
+    end
+
+    # Minimal GTK binding for initialization and quitting the main loop.
+    @[Link("gtk-3")]
+    lib LibGTK
+      fun gtk_init(argc : Int32*, argv : Void**)
+      fun gtk_main_quit
+    end
   end
 end

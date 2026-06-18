@@ -10,11 +10,15 @@ module CrystalUI
         def initialize
         end
 
-        def create
+        def supported? : Bool
+          true
+        end
+
+        def create(icon : IconSource? = nil, title : String? = nil)
           Log.warn { "Windows tray adapter is a stub" }
         end
 
-        def set_icon(icon_bytes : Bytes, template : Bool = false)
+        def set_icon(icon : IconSource)
         end
 
         def set_title(title : String)

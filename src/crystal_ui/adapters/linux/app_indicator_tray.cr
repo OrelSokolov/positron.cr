@@ -34,7 +34,11 @@ module CrystalUI
           @menu = Pointer(Void).null
         end
 
-        def create
+        def supported? : Bool
+          true
+        end
+
+        def create(icon : IconSource? = nil, title : String? = nil)
           # Use g_object_new(APP_INDICATOR_TYPE, ...) instead of the deprecated
           # app_indicator_new(), matching getlantern/systray's fix.
           @indicator = LibGObject.g_object_new(
@@ -46,6 +50,9 @@ module CrystalUI
           )
           @menu = LibGTK.gtk_menu_new
           LibAppIndicator.app_indicator_set_menu(@indicator, @menu)
+
+          set_icon(icon) if icon
+          set_title(title) if title
         end
 
         def show
@@ -62,13 +69,18 @@ module CrystalUI
           )
         end
 
-        def set_icon(icon_bytes : Bytes, template : Bool = false)
-          data = icon_bytes.dup
-          Box.box({self, data}).tap do |box|
+        def set_icon(icon : IconSource)
+          if icon.ico?
+            Log.warn { "ICO icons are not supported by the Linux tray adapter; ignoring" }
+            return
+          end
+
+          data = icon.bytes.dup
+          Box.box({self, data, icon.format}).tap do |box|
             LibGLib.g_idle_add(
               ->(ptr : Void*) {
-                tuple = Box(Tuple(AppIndicatorTray, Bytes)).unbox(ptr)
-                tuple[0].do_set_icon(tuple[1])
+                tuple = Box(Tuple(AppIndicatorTray, Bytes, Symbol)).unbox(ptr)
+                tuple[0].do_set_icon(tuple[1], tuple[2])
                 0 # G_SOURCE_REMOVE
               }.pointer.as(Void*),
               box
@@ -175,13 +187,16 @@ module CrystalUI
           )
         end
 
-        protected def do_set_icon(icon_bytes : Bytes)
+        protected def do_set_icon(icon_bytes : Bytes, format : Symbol)
           cleanup_temp_icon
 
-          tmpdir_ptr = LibC.getenv("TMPDIR")
-          tmpdir = tmpdir_ptr ? String.new(tmpdir_ptr) : "/tmp"
-          path = File.join(tmpdir, "crystalui_icon_XXXXXX")
+          ext = case format
+                when :svg then "svg"
+                when :png then "png"
+                else           "bin"
+                end
 
+          path = File.join(Dir.tempdir, "crystalui_icon_XXXXXX.#{ext}")
           fd = LibC.mkstemp(path)
           return if fd == -1
 

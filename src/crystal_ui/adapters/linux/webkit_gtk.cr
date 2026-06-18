@@ -6,9 +6,11 @@ module CrystalUI
     module Linux
       # Linux desktop WebView backed by WebKitGTK 4.1.
       #
-      # This is a thin shim: it creates the GTK window, exposes a JS bridge
-      # via `window.webkit.messageHandlers.crystal.postMessage(...)`, and
-      # forwards calls back to the Crystal Host through the bound block.
+      # Implements the platform-agnostic WebViewPort contract:
+      #   - Creates a GTK window and WebKit view.
+      #   - Loads URLs or raw HTML.
+      #   - Injects a generic `CrystalBridge.postMessage` shim.
+      #   - Forwards JS messages to the host and evaluates host responses.
       class WebKitGTK < WebViewPort
         @window : Void*
         @web_view : Void*
@@ -23,16 +25,19 @@ module CrystalUI
           @user_content_manager = Pointer(Void).null
         end
 
-        def create(title : String, width : Int32, height : Int32, icon_path : String? = nil)
+        def create(config : WebViewConfig)
           argc = 0
           LibGTK.gtk_init(pointerof(argc), nil)
 
           @window = LibGTK.gtk_window_new(0) # GTK_WINDOW_TOPLEVEL
-          LibGTK.gtk_window_set_title(@window, title)
-          LibGTK.gtk_window_set_default_size(@window, width, height)
+          LibGTK.gtk_window_set_title(@window, config.title)
+          LibGTK.gtk_window_set_default_size(@window, config.width, config.height)
 
-          if icon_path && File.exists?(icon_path)
-            LibGTK.gtk_window_set_icon_from_file(@window, icon_path, nil)
+          if icon = config.icon
+            icon_path = write_temp_icon(icon)
+            if icon_path && File.exists?(icon_path)
+              LibGTK.gtk_window_set_icon_from_file(@window, icon_path, nil)
+            end
           end
 
           # Intercept the window close button: hide instead of destroy so the
@@ -58,8 +63,13 @@ module CrystalUI
           LibGTK.gtk_container_add(@window, @web_view)
         end
 
-        def navigate(url : String)
+        def load_url(url : String)
           LibWebKit.webkit_web_view_load_uri(@web_view, url)
+        end
+
+        def load_html(html : String, base_url : String? = nil)
+          base = base_url || ""
+          LibWebKit.webkit_web_view_load_html(@web_view, html, base)
         end
 
         def eval_js(script : String)
@@ -81,6 +91,8 @@ module CrystalUI
                    @user_content_manager, name) == 1
             raise "Failed to register JS message handler '#{name}'"
           end
+
+          inject_bridge_shim(name)
 
           data_ptr = Box.box(self)
 
@@ -117,47 +129,98 @@ module CrystalUI
         def close
           LibGTK.gtk_main_quit
         end
-      end
 
-      @[Link("gtk-3")]
-      lib LibGTK
-        fun gtk_init(argc : Int32*, argv : Void**)
-        fun gtk_window_new(type : Int32) : Void*
-        fun gtk_window_set_title(window : Void*, title : LibC::Char*)
-        fun gtk_window_set_default_size(window : Void*, width : Int32, height : Int32)
-        fun gtk_window_set_icon_from_file(window : Void*, filename : LibC::Char*, err : Void**) : Int32
-        fun gtk_container_add(container : Void*, widget : Void*)
-        fun gtk_widget_show_all(widget : Void*)
-        fun gtk_widget_hide(widget : Void*)
-        fun gtk_main
-        fun gtk_main_quit
-      end
+        private def inject_bridge_shim(handler_name : String)
+          shim = <<-JS
+            window.CrystalBridge = window.CrystalBridge || {
+              postMessage: function(jsonString) {
+                window.webkit.messageHandlers.#{handler_name}.postMessage(JSON.parse(jsonString));
+              }
+            };
+          JS
 
-      @[Link("gobject-2.0")]
-      lib LibGObject
-        fun g_signal_connect_data(
-          instance : Void*,
-          detailed_signal : LibC::Char*,
-          c_handler : Void*,
-          data : Void*,
-          destroy_data : Void*,
-          connect_flags : Int32,
-        ) : UInt64
-      end
+          # Inject the shim as a user script so it is available on every page,
+          # including pages loaded after bind() is called.
+          script = LibWebKit.webkit_user_script_new(
+            shim,
+            LibWebKit::WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES,
+            LibWebKit::WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START,
+            nil,
+            nil
+          )
+          LibWebKit.webkit_user_content_manager_add_script(@user_content_manager, script)
+        end
 
-      @[Link("webkit2gtk-4.1")]
-      lib LibWebKit
-        fun webkit_web_view_new : Void*
-        fun webkit_web_view_load_uri(web_view : Void*, uri : LibC::Char*)
-        fun webkit_web_view_run_javascript(web_view : Void*, script : LibC::Char*, cancellable : Void*, callback : Void*, user_data : Void*)
-        fun webkit_web_view_get_user_content_manager(web_view : Void*) : Void*
-        fun webkit_user_content_manager_register_script_message_handler(manager : Void*, name : LibC::Char*) : Int32
-        fun webkit_javascript_result_get_js_value(js_result : Void*) : Void*
-      end
+        private def write_temp_icon(icon : IconSource) : String?
+          ext = case icon.format
+                when :svg then "svg"
+                when :png then "png"
+                when :ico then "ico"
+                else           "bin"
+                end
+          tmpdir = Dir.tempdir
+          path = File.join(tmpdir, "crystalui_icon_#{Process.pid}_#{Time.utc.to_unix_ms}.#{ext}")
+          File.write(path, icon.bytes)
+          path
+        rescue ex
+          Log.warn { "Failed to write temp icon: #{ex.message}" }
+          nil
+        end
 
-      @[Link("javascriptcoregtk-4.1")]
-      lib LibJSC
-        fun jsc_value_to_json(value : Void*, indent : UInt32) : LibC::Char*
+        @[Link("gtk-3")]
+        lib LibGTK
+          fun gtk_init(argc : Int32*, argv : Void**)
+          fun gtk_window_new(type : Int32) : Void*
+          fun gtk_window_set_title(window : Void*, title : LibC::Char*)
+          fun gtk_window_set_default_size(window : Void*, width : Int32, height : Int32)
+          fun gtk_window_set_icon_from_file(window : Void*, filename : LibC::Char*, err : Void**) : Int32
+          fun gtk_container_add(container : Void*, widget : Void*)
+          fun gtk_widget_show_all(widget : Void*)
+          fun gtk_widget_hide(widget : Void*)
+          fun gtk_main
+          fun gtk_main_quit
+        end
+
+        @[Link("gobject-2.0")]
+        lib LibGObject
+          fun g_signal_connect_data(
+            instance : Void*,
+            detailed_signal : LibC::Char*,
+            c_handler : Void*,
+            data : Void*,
+            destroy_data : Void*,
+            connect_flags : Int32,
+          ) : UInt64
+        end
+
+        @[Link("webkit2gtk-4.1")]
+        lib LibWebKit
+          WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES = 0
+          WEBKIT_USER_CONTENT_INJECT_TOP_FRAME  = 1
+
+          WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_START = 0
+          WEBKIT_USER_SCRIPT_INJECT_AT_DOCUMENT_END   = 1
+
+          fun webkit_web_view_new : Void*
+          fun webkit_web_view_load_uri(web_view : Void*, uri : LibC::Char*)
+          fun webkit_web_view_load_html(web_view : Void*, html : LibC::Char*, base_uri : LibC::Char*)
+          fun webkit_web_view_run_javascript(web_view : Void*, script : LibC::Char*, cancellable : Void*, callback : Void*, user_data : Void*)
+          fun webkit_web_view_get_user_content_manager(web_view : Void*) : Void*
+          fun webkit_user_content_manager_register_script_message_handler(manager : Void*, name : LibC::Char*) : Int32
+          fun webkit_user_content_manager_add_script(manager : Void*, script : Void*)
+          fun webkit_user_script_new(source : LibC::Char*, injected_frames : UInt32, injection_time : UInt32, allow_list : Void*, block_list : Void*) : Void*
+          fun webkit_javascript_result_get_js_value(js_result : Void*) : Void*
+        end
+
+        @[Link("javascriptcoregtk-4.1")]
+        lib LibJSC
+          fun jsc_value_to_json(value : Void*, indent : UInt32) : LibC::Char*
+        end
+
+        @[Link("glib-2.0")]
+        lib LibGLib
+          fun g_free(mem : Void*)
+        end
       end
     end
   end

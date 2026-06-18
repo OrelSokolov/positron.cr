@@ -13,7 +13,7 @@ module CrystalUI
     abstract def supported_platforms : Array(Symbol)
 
     # Reference to the host, set by the application during startup.
-    property host : DesktopHost?
+    property host : Host?
 
     # Called by the host during startup to let the plugin register commands.
     # Prefer explicit registration here over macros.

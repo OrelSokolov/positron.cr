@@ -6,7 +6,7 @@ module CrystalUI
   # Developers subclass Application, implement lifecycle hooks,
   # and expose business logic via @[Command] annotated methods.
   abstract class Application
-    @host : DesktopHost?
+    @host : Host?
     @icon_temp_path : String?
     getter plugins = PluginManager.new
     getter registry = CommandRegistry.new
@@ -157,6 +157,10 @@ module CrystalUI
           path
         end
       end
+
+      def icon_source(format : Symbol = :svg) : CrystalUI::IconSource
+        CrystalUI::IconSource.new(icon_bytes, format)
+      end
     end
 
     private def build_application_html(html : String, css : String, js : String, icon_svg : String) : String
@@ -177,16 +181,23 @@ module CrystalUI
     end
 
     # Run the application.
+    #
+    # On desktop this creates the DesktopHost and starts the event loop.
+    # On mobile the native shim owns the lifecycle; calling run() is an error.
     def run
       configure_plugins
-      DesktopHost.new(self).run
+      {% if flag?(:android) || flag?(:ios) %}
+        raise "Do not call Application.run on mobile; the native shim owns the lifecycle"
+      {% else %}
+        DesktopHost.new(self).run
+      {% end %}
     end
 
-    protected def host : DesktopHost
+    protected def host : Host
       @host.not_nil!
     end
 
-    protected def host=(@host : DesktopHost)
+    protected def host=(@host : Host)
     end
   end
 end

@@ -9,6 +9,11 @@ module CrystalUI
   #   - CrystalUI.on(name, callback) / CrystalUI.once(name, callback)
   #   - CrystalUI.state (hydrated from the host)
   #   - CrystalUI.<plugin>.<method>(args) generated from plugin manifests
+  #
+  # The runtime is platform-agnostic: it talks to the host through
+  # `window.CrystalBridge.postMessage(jsonString)`, which each WebView adapter
+  # injects using the native bridge mechanism (WebKit message handlers,
+  # WebView2 chrome.webview, Android @JavascriptInterface, etc.).
   class JSFacadeGenerator
     def initialize(@plugins : Array(Plugin))
     end
@@ -39,10 +44,6 @@ module CrystalUI
         "    CrystalUI.state = state || {};",
         "  };",
         "",
-        "  window.__crystalNotify = function(event, payload) {",
-        "    notify(event, payload);",
-        "  };",
-        "",
         "  window.__crystalPatchState = function(patch) {",
         "    const plugin = patch.plugin;",
         "    const key = patch.key;",
@@ -61,21 +62,21 @@ module CrystalUI
         "      return new Promise(function(resolve, reject) {",
         "        const id = Math.random().toString(36).slice(2) + Date.now().toString(36);",
         "        pending.set(id, { resolve: resolve, reject: reject });",
-        "        window.webkit.messageHandlers.crystal.postMessage({",
-        "          hwapi: {",
-        "            id: id,",
-        "            name: name,",
-        "            args: args",
-        "          }",
-        "        });",
+        "        CrystalBridge.postMessage(JSON.stringify({",
+        "          type: 'command',",
+        "          id: id,",
+        "          name: name,",
+        "          args: args",
+        "        }));",
         "      });",
         "    },",
         "",
         "    emit: function(event, payload) {",
-        "      window.webkit.messageHandlers.crystal.postMessage({",
+        "      CrystalBridge.postMessage(JSON.stringify({",
+        "        type: 'event',",
         "        event: event,",
         "        payload: payload || {}",
-        "      });",
+        "      }));",
         "    },",
         "",
         "    on: function(event, callback) {",
@@ -111,11 +112,6 @@ module CrystalUI
     # Returns a JS snippet that patches a single state key.
     def patch_js(plugin : String, key : String, value) : String
       "window.__crystalPatchState(" + {plugin: plugin, key: key, value: value}.to_json + ")"
-    end
-
-    # Returns a JS snippet that emits a custom event to frontend listeners.
-    def notify_js(event : String, payload : JSON::Any) : String
-      "window.__crystalNotify(" + event.to_json + ", " + payload.to_json + ")"
     end
 
     private def generated_namespaces : String

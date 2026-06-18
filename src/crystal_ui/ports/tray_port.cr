@@ -4,11 +4,14 @@ module CrystalUI
   # Design mirrors getlantern/systray: the Crystal Host drives the tray
   # through a single interface; each platform provides a thin adapter.
   abstract class TrayPort
-    # Initialize the native tray surface. Must be called on the GUI thread.
-    abstract def create
+    # Returns true if the current platform supports a system tray.
+    abstract def supported? : Bool
 
-    # Set the tray icon from raw image bytes (PNG/ICO/etc).
-    abstract def set_icon(icon_bytes : Bytes, template : Bool = false)
+    # Initialize the native tray surface. Must be called on the GUI thread.
+    abstract def create(icon : IconSource? = nil, title : String? = nil)
+
+    # Set the tray icon from raw image bytes (PNG/ICO/SVG/etc).
+    abstract def set_icon(icon : IconSource)
 
     # Set the tray title (macOS/Linux label).
     abstract def set_title(title : String)
