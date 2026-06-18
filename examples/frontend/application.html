@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CrystalUI</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <main class="card">
+    <div class="logo">{{ICON_SVG}}</div>
+    <h1>CrystalUI</h1>
+    <p class="subtitle">
+      Crystal Host owns state and logic.<br>
+      WebKitGTK is just a thin native shim.
+    </p>
+    <div>
+      <button class="button" id="actionBtn" onclick="sendCommand()">
+        <span class="spinner"></span>
+        <span class="label">Call Crystal Host</span>
+      </button>
+      <button class="button" id="themeBtn" onclick="toggleTheme()">
+        Toggle Theme
+      </button>
+    </div>
+    <div class="result" id="result">Click the button to invoke a Crystal command</div>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+    document.body.setAttribute('data-theme', CrystalUI.state.settings.theme);
+
+    CrystalUI.on('state.settings.theme', function(theme) {
+      document.body.setAttribute('data-theme', theme);
+    });
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>

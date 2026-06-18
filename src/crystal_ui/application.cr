@@ -7,6 +7,7 @@ module CrystalUI
   # and expose business logic via @[Command] annotated methods.
   abstract class Application
     @host : DesktopHost?
+    @icon_temp_path : String?
     getter plugins = PluginManager.new
     getter registry = CommandRegistry.new
 
@@ -90,6 +91,66 @@ module CrystalUI
     # Call this inside on_ready after navigating the webview.
     def inject_js_runtime
       host.inject_js_runtime
+    end
+
+    # Return the complete HTML document for the WebView.
+    #
+    # This method must be implemented by embedding frontend assets at compile
+    # time using the `embed_application_files` macro. There is no runtime file
+    # loading: the desktop binary is self-contained.
+    abstract def application_html : String
+
+    # Embed frontend assets into the compiled binary at compile time.
+    #
+    # This macro also embeds the application icon and exposes:
+    #   - `embedded_icon_svg` : String
+    #   - `icon_bytes` : Bytes
+    #   - `icon_path` : String (writes a temporary file on first call)
+    #
+    # Usage in your Application subclass:
+    #   embed_application_files(__DIR__)
+    #   embed_application_files(__DIR__, "icon.svg")
+    #   embed_application_files(__DIR__, "../assets/crystal-icon.svg")
+    macro embed_application_files(dir, icon = "icon.svg")
+      private def embedded_icon_svg : String
+        {{ run(__DIR__ + "/embed_file.cr", dir + "/" + icon) }}
+      end
+
+      private def application_html : String
+        html = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.html") }}
+        css = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.css") }}
+        js = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.js") }}
+        build_application_html(html, css, js, embedded_icon_svg)
+      end
+
+      def icon_bytes : Bytes
+        embedded_icon_svg.to_slice
+      end
+
+      def icon_path : String
+        @icon_temp_path ||= begin
+          path = File.join(Dir.tempdir, "crystalui-icon-#{Process.pid}.svg")
+          File.write(path, embedded_icon_svg)
+          path
+        end
+      end
+    end
+
+    private def build_application_html(html : String, css : String, js : String, icon_svg : String) : String
+      html
+        .sub("{{CSS}}", css)
+        .sub("{{JS}}", js)
+        .sub("{{ICON_SVG}}", icon_svg)
+        .sub("{{RUNTIME_JS}}", runtime_js)
+        .sub("{{HYDRATE_JS}}", hydrate_js)
+    end
+
+    private def runtime_js : String
+      CrystalUI::JSFacadeGenerator.new(plugins.to_a).runtime_js
+    end
+
+    private def hydrate_js : String
+      CrystalUI::JSFacadeGenerator.new(plugins.to_a).hydrate_js(state_manager.snapshot)
     end
 
     # Run the application.
