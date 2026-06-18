@@ -13,12 +13,14 @@ require "./crystal_ui/js_facade_generator"
 require "./crystal_ui/ports/event_loop_port"
 require "./crystal_ui/ports/webview_port"
 require "./crystal_ui/ports/tray_port"
+require "./crystal_ui/ports/icon_port"
 require "./crystal_ui/host"
 
 # Desktop platforms
 {% if flag?(:linux) && !flag?(:android) %}
   require "./crystal_ui/adapters/linux/webkit_gtk"
   require "./crystal_ui/adapters/linux/app_indicator_tray"
+  require "./crystal_ui/adapters/linux/icon"
   require "./crystal_ui/adapters/linux/factory"
   require "./crystal_ui/event_loop/linux"
   require "./crystal_ui/desktop_host"
@@ -27,6 +29,7 @@ require "./crystal_ui/host"
 {% if flag?(:win32) %}
   require "./crystal_ui/adapters/windows/webview2"
   require "./crystal_ui/adapters/windows/tray"
+  require "./crystal_ui/adapters/windows/icon"
   require "./crystal_ui/adapters/windows/factory"
   require "./crystal_ui/event_loop/windows"
   require "./crystal_ui/desktop_host"
@@ -35,6 +38,7 @@ require "./crystal_ui/host"
 {% if flag?(:darwin) && !flag?(:ios) %}
   require "./crystal_ui/adapters/macos/webview"
   require "./crystal_ui/adapters/macos/tray"
+  require "./crystal_ui/adapters/macos/icon"
   require "./crystal_ui/adapters/macos/factory"
   require "./crystal_ui/event_loop/macos"
   require "./crystal_ui/desktop_host"
@@ -44,6 +48,7 @@ require "./crystal_ui/host"
 {% if flag?(:android) %}
   require "./crystal_ui/mobile_host"
   require "./crystal_ui/adapters/android/host"
+  require "./crystal_ui/adapters/android/icon"
   require "./crystal_ui/adapters/android/factory"
   require "./crystal_ui/event_loop/android"
 {% end %}
@@ -51,6 +56,7 @@ require "./crystal_ui/host"
 {% if flag?(:ios) %}
   require "./crystal_ui/mobile_host"
   require "./crystal_ui/adapters/ios/host"
+  require "./crystal_ui/adapters/ios/icon"
   require "./crystal_ui/adapters/ios/factory"
   require "./crystal_ui/event_loop/ios"
 {% end %}

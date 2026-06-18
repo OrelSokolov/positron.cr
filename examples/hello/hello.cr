@@ -61,7 +61,7 @@ end
 
 class HelloApp < CrystalUI::Application
   # Embed frontend/application.html, application.css, application.js and icon.
-  embed_application_files(__DIR__, "../../assets/crystal-icon.svg")
+  embed_application_files(__DIR__, "../../assets/crystal-icon")
 
   def configure_plugins
     use SettingsPlugin

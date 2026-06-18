@@ -1,5 +1,6 @@
 module CrystalUI
   {% if flag?(:ios) %}
     alias MobileHostAdapter = Adapters::IOS::Host
+    alias IconAdapter = Adapters::IOS::Icon
   {% end %}
 end

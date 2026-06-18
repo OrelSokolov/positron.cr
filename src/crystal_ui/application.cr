@@ -1,4 +1,5 @@
 require "json"
+require "base64"
 
 module CrystalUI
   # Base class for end-user CrystalUI applications.
@@ -126,48 +127,90 @@ module CrystalUI
     # Embed frontend assets into the compiled binary at compile time.
     #
     # This macro also embeds the application icon and exposes:
-    #   - `embedded_icon_svg` : String
+    #   - `embedded_icon` : String
+    #   - `embedded_icon_html` : String (SVG inline or base64 <img>)
     #   - `icon_bytes` : Bytes
     #   - `icon_path` : String (writes a temporary file on first call)
+    #   - `icon_source` : IconSource
+    #
+    # The icon file is selected per platform using `IconAdapter`:
+    #   - Linux   -> .svg (fallback .png, .ico)
+    #   - Windows -> .ico (fallback .png, .svg)
+    #   - macOS   -> .png (fallback .svg, .ico)
+    #   - Mobile  -> .png (fallback .svg, .ico)
     #
     # Usage in your Application subclass:
     #   embed_application_files(__DIR__)
-    #   embed_application_files(__DIR__, "icon.svg")
-    #   embed_application_files(__DIR__, "../assets/crystal-icon.svg")
-    macro embed_application_files(dir, icon = "icon.svg")
-      private def embedded_icon_svg : String
-        {{ run(__DIR__ + "/embed_file.cr", dir + "/" + icon) }}
+    #   embed_application_files(__DIR__, "icon")
+    #   embed_application_files(__DIR__, "../assets/crystal-icon")
+    macro embed_application_files(dir, icon = "icon")
+      {% known_exts = [".svg", ".png", ".ico"] %}
+      {% preferred_ext = CrystalUI::IconAdapter::PREFERRED_EXTENSION %}
+
+      # Strip a known extension from the provided icon path so we can append
+      # the platform-preferred extension.
+      {% icon_base = icon %}
+      {% for ext in known_exts %}
+        {% if icon.ends_with?(ext) %}
+          {% icon_base = icon[0..-(ext.size + 1)] %}
+        {% end %}
+      {% end %}
+
+      # Resolve the actual icon file at compile time, falling back through
+      # common formats if the platform-preferred file is missing.
+      {% resolved = run(__DIR__ + "/resolve_icon_path.cr", dir + "/" + icon_base, preferred_ext, ".svg", ".png", ".ico") %}
+      {% resolved_lines = resolved.split("\n") %}
+      {% icon_file = resolved_lines[0] %}
+      {% icon_ext = resolved_lines[1] %}
+      {% icon_fmt = (icon_ext == ".svg") ? :svg : (icon_ext == ".png") ? :png : :ico %}
+
+      private def embedded_icon : String
+        {{ run(__DIR__ + "/embed_file.cr", icon_file) }}
+      end
+
+      private def embedded_icon_html : String
+        case {{ icon_fmt.stringify }}
+        when "svg"
+          embedded_icon
+        when "png"
+          "<img src=\"data:image/png;base64,#{Base64.strict_encode(icon_bytes)}\" alt=\"icon\">"
+        when "ico"
+          "<img src=\"data:image/x-icon;base64,#{Base64.strict_encode(icon_bytes)}\" alt=\"icon\">"
+        else
+          ""
+        end
       end
 
       private def application_html : String
         html = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.html") }}
         css = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.css") }}
         js = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.js") }}
-        build_application_html(html, css, js, embedded_icon_svg)
+        build_application_html(html, css, js, embedded_icon_html)
       end
 
       def icon_bytes : Bytes
-        embedded_icon_svg.to_slice
+        embedded_icon.to_slice
       end
 
       def icon_path : String
         @icon_temp_path ||= begin
-          path = File.join(Dir.tempdir, "crystalui-icon-#{Process.pid}.svg")
-          File.write(path, embedded_icon_svg)
+          ext = {{ icon_ext.stringify }}
+          path = File.join(Dir.tempdir, "crystalui-icon-#{Process.pid}#{ext}")
+          File.write(path, embedded_icon)
           path
         end
       end
 
-      def icon_source(format : Symbol = :svg) : CrystalUI::IconSource
+      def icon_source(format : Symbol = {{ icon_fmt }}) : CrystalUI::IconSource
         CrystalUI::IconSource.new(icon_bytes, format)
       end
     end
 
-    private def build_application_html(html : String, css : String, js : String, icon_svg : String) : String
+    private def build_application_html(html : String, css : String, js : String, icon_html : String) : String
       html
         .sub("{{CSS}}", css)
         .sub("{{JS}}", js)
-        .sub("{{ICON_SVG}}", icon_svg)
+        .sub("{{ICON_HTML}}", icon_html)
         .sub("{{RUNTIME_JS}}", runtime_js)
         .sub("{{HYDRATE_JS}}", hydrate_js)
     end
