@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>System Notifications — CrystalUI</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <main class="card">
+    <div class="logo">{{ICON_SVG}}</div>
+    <h1>System Notifications</h1>
+    <p class="subtitle">
+      Crystal Host drives native OS notifications.<br>
+      Click a notification bubble and the host is notified.
+    </p>
+
+    <div class="controls">
+      <button class="button" onclick="sendNotification()">Send notification</button>
+      <button class="button" onclick="requestPermission()">Request permission</button>
+      <button class="button" onclick="checkPermission()">Check permission</button>
+    </div>
+
+    <div class="row">
+      <input type="text" id="notifId" class="input" placeholder="Notification id to clear">
+      <button class="button" onclick="clearNotification()">Clear</button>
+    </div>
+
+    <div class="result" id="result">Ready</div>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>

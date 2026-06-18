@@ -39,6 +39,10 @@ module CrystalUI
         "    CrystalUI.state = state || {};",
         "  };",
         "",
+        "  window.__crystalNotify = function(event, payload) {",
+        "    notify(event, payload);",
+        "  };",
+        "",
         "  window.__crystalPatchState = function(patch) {",
         "    const plugin = patch.plugin;",
         "    const key = patch.key;",
@@ -107,6 +111,11 @@ module CrystalUI
     # Returns a JS snippet that patches a single state key.
     def patch_js(plugin : String, key : String, value) : String
       "window.__crystalPatchState(" + {plugin: plugin, key: key, value: value}.to_json + ")"
+    end
+
+    # Returns a JS snippet that emits a custom event to frontend listeners.
+    def notify_js(event : String, payload : JSON::Any) : String
+      "window.__crystalNotify(" + event.to_json + ", " + payload.to_json + ")"
     end
 
     private def generated_namespaces : String

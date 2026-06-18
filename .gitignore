@@ -1,7 +1,15 @@
 .crystal/
 *.tar.gz
-/examples/hello
 /lib/
 /.shards/
 *.dwarf
 /.env
+
+# Example binaries (everything inside an example dir except source and frontend)
+/examples/*/**
+!/examples/*/*.cr
+!/examples/*/frontend/
+!/examples/*/frontend/**
+
+# Build logs
+/logs/*.log

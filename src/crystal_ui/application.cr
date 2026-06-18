@@ -87,6 +87,29 @@ module CrystalUI
       plugins.register(plugin)
     end
 
+    # DSL helper for plugin registration.
+    #
+    #   use CrystalUI::Plugins::Logger
+    #   use MyCustomPlugin
+    #
+    # Plugins instantiated this way are enabled for this application.
+    macro use(plugin_class)
+      register_plugin({{plugin_class}}.new)
+    end
+
+    # Explicit plugin registration for instances that need constructor args.
+    def use(plugin : Plugin)
+      register_plugin(plugin)
+    end
+
+    # Override to declare the plugins this application needs.
+    #
+    # By default CrystalUI ships with *no* plugins enabled. The developer
+    # opts-in by listing the required plugins here.
+    def configure_plugins
+      # override in subclass
+    end
+
     # Inject the CrystalUI JS runtime and hydrate state.
     # Call this inside on_ready after navigating the webview.
     def inject_js_runtime
@@ -155,6 +178,7 @@ module CrystalUI
 
     # Run the application.
     def run
+      configure_plugins
       DesktopHost.new(self).run
     end
 

@@ -1,7 +1,8 @@
 require "uri"
 require "json"
 require "time"
-require "../src/crystal_ui"
+require "../../src/crystal_ui"
+require "../../src/crystal_ui/plugins/logger"
 
 # Example plugin demonstrating the RailsWay architecture:
 # - explicit command binding via bind()
@@ -61,10 +62,11 @@ end
 
 class HelloApp < CrystalUI::Application
   # Embed frontend/application.html, application.css, application.js and icon.
-  embed_application_files(__DIR__, "../assets/crystal-icon.svg")
+  embed_application_files(__DIR__, "../../assets/crystal-icon.svg")
 
-  def initialize
-    register_plugin(SettingsPlugin.new)
+  def configure_plugins
+    use SettingsPlugin
+    use CrystalUI::Plugins::Logger
   end
 
   def register_commands(registry)

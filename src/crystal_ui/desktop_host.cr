@@ -29,6 +29,7 @@ module CrystalUI
     end
 
     def run
+      ready_plugins
       @app.on_ready
       @event_loop.run
     end
@@ -72,6 +73,12 @@ module CrystalUI
         plugin.host = self
         plugin.bind(@app.registry, @state_manager)
         @state_manager.load_plugin_state(plugin.name, plugin.state)
+      end
+    end
+
+    private def ready_plugins
+      @app.plugins.each do |plugin|
+        plugin.on_ready(self)
       end
     end
 

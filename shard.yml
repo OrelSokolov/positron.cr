@@ -8,7 +8,7 @@ description: |
   CrystalUI — host-shim UI framework. Crystal Host owns state and logic;
   native code is a thin shim that exposes OS APIs to Crystal.
 
-license: MIT
+license: Non-Commercial
 
 crystal: ">= 1.10.0"
 
