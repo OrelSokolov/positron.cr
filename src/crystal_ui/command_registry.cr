@@ -14,7 +14,19 @@ module CrystalUI
     data : JSON::Any,
     error : String? = nil
 
+  # Metadata describing a command argument for JS facade generation.
+  record ArgumentManifest,
+    name : String,
+    type : String
+
+  # Metadata describing an exposed command for JS facade generation.
+  record CommandManifest,
+    name : String,
+    args : Array(ArgumentManifest) = [] of ArgumentManifest,
+    returns : String? = nil
+
   # Dispatches @[Command] annotated methods on application and plugin instances.
+  # Commands may be namespaced, e.g. "settings.current_theme".
   class CommandRegistry
     @commands = Hash(String, Proc(CommandRequest, CommandResult)).new
 

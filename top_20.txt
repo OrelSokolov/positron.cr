@@ -1,0 +1,47 @@
+# CrystalUI — Top 20 Absolutely Universal Plugins
+# Platforms: U = Universal (Linux, macOS, Windows, Android, iOS)
+# Theme / Appearance is intentionally excluded: UI is fully custom JS/HTML/CSS inside WebView.
+
+| #   | Plugin                          | Notes                                                     |
+|-----|---------------------------------|-----------------------------------------------------------|
+| 1   | WebView / Browser Surface       | Already on Linux; need macOS/Windows/Android/iOS shims    |
+| 2   | System Notifications            | Native push-style OS notifications                        |
+| 3   | Local Notifications             | Scheduled, with actions and channels                      |
+| 4   | Storage / Preferences           | Key-value, UserDefaults, SharedPreferences, registry      |
+| 5   | Secure Storage / Keychain       | Tokens, passwords, certificates                           |
+| 6   | File System Access              | App dirs, temp, read/write, paths                         |
+| 7   | Permissions Manager             | Request and check OS permissions                          |
+| 8   | App Lifecycle                   | resume / pause / terminate / background                   |
+| 9   | Deep Links / URL Schemes        | Custom schemes, universal links, app links                |
+| 10  | Clipboard                       | Text, images, files                                       |
+| 11  | Dialogs & Alerts                | Alert, confirm, prompt, toast/snackbar                    |
+| 12  | Share Sheet / Intent            | Cross-app sharing                                         |
+| 13  | Logger / Crash Reporter         | Console, file log, crash dumps                            |
+| 14  | App Info / Version / Package    | Version, build, bundle ID, install source                 |
+| 15  | Geolocation                     | GPS, coordinates, geofences                               |
+| 16  | Screen / Display Info           | DPI, size, monitors, orientation                          |
+| 17  | Camera                          | Photo/video capture                                       |
+| 18  | Keyboard Events / Input         | Shortcuts, visibility, keyboard height                    |
+| 19  | File Picker                     | Open files, multiple selection, folders                   |
+| 20  | SQLite / Local Database         | Embedded local database                                   |
+
+# First 10 to implement (core foundation)
+# Without these, the app cannot function properly on any platform.
+
+1. WebView
+2. Storage / Preferences
+3. File System
+4. Permissions Manager
+5. App Lifecycle
+6. System Notifications
+7. Local Notifications
+8. Clipboard
+9. Dialogs & Alerts
+10. Deep Links
+
+# Notable exclusions from Top 20 (still important, but not universal)
+# - Global Hotkeys       -> desktop-only, separate desktop plugin
+# - Audio Player         -> universal, next tier
+# - Video Player         -> universal, next tier
+# - Biometric Auth       -> universal but Linux needs fallback
+# - Push Notifications   -> requires server/provider, separate plugin

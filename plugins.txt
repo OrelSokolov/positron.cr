@@ -1,0 +1,111 @@
+# CrystalUI — Candidate Plugins (sorted by importance, descending)
+# Platforms: U = Universal, D = Desktop only, M = Mobile only, M ±D = Mobile primary, desktop possible
+
+# Tier 1 — Core System Integration
+
+| #   | Plugin                          | Platforms | Notes                                                     |
+|-----|---------------------------------|-----------|-----------------------------------------------------------|
+| 1   | WebView / Browser Surface       | U         | Already on Linux; need macOS/Windows/Android/iOS shims    |
+| 2   | System Notifications            | U         | Native push-style OS notifications                        |
+| 3   | Local Notifications             | U         | Scheduled, with actions and channels                      |
+| 4   | Storage / Preferences           | U         | Key-value, UserDefaults, SharedPreferences, registry      |
+| 5   | Secure Storage / Keychain       | U         | Tokens, passwords, certificates                           |
+| 6   | File System Access              | U         | App dirs, temp, read/write, paths                         |
+| 7   | Permissions Manager             | U         | Request and check OS permissions                          |
+| 8   | App Lifecycle                   | U         | resume / pause / terminate / background                   |
+| 9   | Deep Links / URL Schemes        | U         | Custom schemes, universal links, app links                |
+| 10  | Clipboard                       | U         | Text, images, files                                       |
+| 11  | Dialogs & Alerts                | U         | Alert, confirm, prompt, toast/snackbar                    |
+| 12  | Share Sheet / Intent            | U         | Cross-app sharing                                         |
+| 13  | Logger / Crash Reporter         | U         | Console, file log, crash dumps                            |
+| 14  | App Info / Version / Package    | U         | Version, build, bundle ID, install source                 |
+| 15  | System Tray / Status Bar        | U         | Already on Linux; need macOS/Windows shims                |
+| 16  | Theme / Appearance              | U         | Dark/light, accent color, Material You                    |
+| 17  | Screen / Display Info           | U         | DPI, size, monitors, orientation                          |
+| 19  | Keyboard Events / Input         | U         | Shortcuts, visibility, keyboard height                    |
+| 20  | File Picker                     | U         | Open files, multiple selection, folders                   |
+
+# Tier 2 — Files, Media, Hardware
+
+| #   | Plugin                          | Platforms | Notes                                                     |
+|-----|---------------------------------|-----------|-----------------------------------------------------------|
+| 21  | Save File Dialog                | U         | With type/extension filter                                |
+| 22  | Drag and Drop                   | U         | Files, text, URLs                                         |
+| 23  | Camera                          | U         | Photo/video capture                                       |
+| 24  | Microphone / Audio Recorder     | U         | Audio recording                                           |
+| 25  | Photo Gallery / Media Library   | U         | Access device photos/videos                               |
+| 26  | Image Picker                    | U         | Select one or many images                                 |
+| 27  | Audio Player                    | U         | Local and background playback                             |
+| 28  | Video Player                    | U         | Native video player surface                               |
+| 29  | Geolocation                     | U         | GPS, coordinates, geofences                               |
+| 30  | Sensors                         | M ±D      | Accelerometer, gyroscope, magnetometer                    |
+
+| 31  | Biometric Auth                  | U         | Face ID, Touch ID, fingerprint, Windows Hello             |
+
+| 32  | Push Notifications              | M ±D      | FCM, APNs                                                 |
+| 33  | Background Fetch / Tasks        | M ±D      | Periodic background work                                  |
+| 34  | SQLite / Local Database         | U         | Embedded local database                                   |
+| 36  | Badges                          | U         | App icon badge + tray badge                               |
+| 37  | Progress / Taskbar Progress     | U         | Taskbar, Dock, notification progress                      |
+| 38  | Global Hotkeys                  | D         | Shortcuts without focus                                   |
+| 39  | System Sounds                   | U         | Native OS sounds                                          |
+| 40  | Haptic / Vibration              | U         | Patterns and intensity                                    |
+
+# Tier 3 — Device & System Integration
+
+| #   | Plugin                          | Platforms | Notes                                                     |
+|-----|---------------------------------|-----------|-----------------------------------------------------------|
+| 41  | Contacts                        | U         | Read/write contacts                                       |
+| 42  | Calendar                        | U         | Read/write events                                         |
+| 43  | SMS                             | M         | Read/send SMS                                             |
+| 45  | NFC                             | M         | Read/write NFC tags                                       |
+| 46  | Bluetooth / BLE                 | U         | Scan, connect, GATT                                       |
+| 47  | WiFi Info                       | U         | Status, SSID (limited on iOS)                             |
+| 48  | Battery Status                  | U         | Level, charging, power save mode                          |
+| 49  | Power Management                | U         | Sleep detection, wake lock                                |
+| 50  | Torch / Flashlight              | M         | Toggle camera flash                                       |
+| 51  | Barcode / QR Scanner            | U         | Barcode scanning                                          |
+| 52  | Document Scanner                | U         | Document scanning                                         |
+| 53  | OCR                             | U         | Text recognition from images                              |
+| 54  | Speech to Text                  | U         | Voice input                                               |
+| 55  | Text to Speech                  | U         | Speech synthesis                                          |
+| 56  | Media Session                   | U         | Lock-screen controls, now playing                         |
+| 57  | Screen Recording                | U         | Record screen                                             |
+| 58  | Screenshot                      | U         | Capture window/screen                                     |
+| 59  | Image Editor                    | U         | Crop, rotate, filters                                     |
+| 60  | Print                           | U         | Print documents and HTML                                  |
+
+# Tier 4 — Desktop Integration & Productivity
+
+| #   | Plugin                          | Platforms | Notes                                                     |
+|-----|---------------------------------|-----------|-----------------------------------------------------------|
+| 63  | Protocol Handlers / File Assoc. | D         | Register .myapp, custom protocols                         |
+| 64  | Auto Launcher / Startup         | U         | Launch on system start                                    |
+| 65  | App Updater                     | U         | Check and install updates                                 |
+| 66  | Clipboard History               | D         | Clipboard history                                         |
+| 67  | Title Bar / Frame Customization | D         | Custom window frame                                       |
+| 68  | Always On Top                   | D         | Keep window above others                                  |
+| 69  | Window Transparency             | D         | Transparent window background                             |
+| 70  | Installer / Packaging Helpers   | D         | MSI, DMG, AppImage, deb, rpm helpers                      |
+
+# Tier 5 — Monetization, Cloud, Auth
+
+| #   | Plugin                          | Platforms | Notes                                                     |
+|-----|---------------------------------|-----------|-----------------------------------------------------------|
+| 71  | Code Signing Helpers            | D         | Notarization, certificates                                |
+| 72  | In-App Purchases                | M         | App Store / Play Store billing                            |
+| 73  | Subscriptions                   | M         | Subscription management                                   |
+| 75  | Social Login                    | U         | Apple, Google, Facebook, GitHub                           |
+| 76  | OAuth / SSO Helpers             | U         | PKCE, token refresh, system browser                       |
+| 77  | Analytics                       | U         | Events, metrics                                           |
+| 80  | Backup / Sync                   | U         | Data backup and sync                                      |
+
+# Tier 6 — Advanced & Specialized
+
+| #   | Plugin                          | Platforms | Notes                                                     |
+|-----|---------------------------------|-----------|-----------------------------------------------------------|
+| 81  | Maps Integration                | U         | Apple Maps, Google Maps                                   |
+| 82  | AR / VR                         | M         | ARKit, ARCore                                             |
+| 83  | On-device Machine Learning      | U         | Core ML, TensorFlow Lite                                  |
+| 84  | Wallet / Passes                 | M         | Apple Wallet, Google Pay Passes                           |
+

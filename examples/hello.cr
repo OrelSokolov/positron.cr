@@ -3,8 +3,69 @@ require "json"
 require "time"
 require "../src/crystal_ui"
 
+# Example plugin demonstrating the RailsWay architecture:
+# - explicit command binding via bind()
+# - manifest for JS facade generation
+# - observable state via StateManager
+class SettingsPlugin < CrystalUI::Plugin
+  property theme : String = "dark"
+
+  def name : String
+    "settings"
+  end
+
+  def supported_platforms : Array(Symbol)
+    [:desktop, :android, :ios]
+  end
+
+  def state : Hash(String, JSON::Any)
+    {
+      "theme" => JSON.parse(@theme.to_json),
+    }
+  end
+
+  def manifest : Hash(String, CrystalUI::CommandManifest)
+    {
+      "settings.current_theme" => CrystalUI::CommandManifest.new(
+        name: "settings.current_theme",
+        returns: "String"
+      ),
+      "settings.set_theme" => CrystalUI::CommandManifest.new(
+        name: "settings.set_theme",
+        args: [
+          CrystalUI::ArgumentManifest.new(name: "theme", type: "String"),
+        ],
+        returns: "String"
+      ),
+    }
+  end
+
+  def bind(registry : CrystalUI::CommandRegistry, state : CrystalUI::StateManager)
+    registry.register("settings.current_theme") do |request|
+      CrystalUI::CommandResult.new(
+        success: true,
+        data: JSON.parse(@theme.to_json)
+      )
+    end
+
+    registry.register("settings.set_theme") do |request|
+      @theme = request.args["theme"].as_s
+      set_state("theme", @theme)
+      CrystalUI::CommandResult.new(
+        success: true,
+        data: JSON.parse(@theme.to_json)
+      )
+    end
+
+  end
+end
+
 class HelloApp < CrystalUI::Application
   ICON_PATH = File.expand_path("../assets/crystal-icon.svg", __DIR__)
+
+  def initialize
+    register_plugin(SettingsPlugin.new)
+  end
 
   def register_commands(registry)
     command_registry
@@ -54,6 +115,14 @@ class HelloApp < CrystalUI::Application
     host.stop if host
   end
 
+  private def runtime_js : String
+    CrystalUI::JSFacadeGenerator.new(plugins.to_a).runtime_js
+  end
+
+  private def hydrate_js : String
+    CrystalUI::JSFacadeGenerator.new(plugins.to_a).hydrate_js(state_manager.snapshot)
+  end
+
   private def demo_html : String
     crystal_svg = File.read(ICON_PATH)
 
@@ -91,9 +160,14 @@ class HelloApp < CrystalUI::Application
           background: radial-gradient(ellipse at top, var(--blue-50), #ffffff),
                       linear-gradient(135deg, #ffffff 0%, var(--blue-100) 100%);
           overflow: hidden;
+          transition: background 0.3s ease;
         }
 
-        /* Animated background orbs */
+        body[data-theme="dark"] {
+          background: radial-gradient(ellipse at top, #1e293b, #0f172a),
+                      linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+        }
+
         .orb {
           position: absolute;
           border-radius: 50%;
@@ -138,6 +212,13 @@ class HelloApp < CrystalUI::Application
           border-radius: 2rem;
           box-shadow: var(--shadow);
           animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+          transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body[data-theme="dark"] .card {
+          background: rgba(30, 41, 59, 0.75);
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #e2e8f0;
         }
 
         @keyframes fadeInUp {
@@ -170,12 +251,21 @@ class HelloApp < CrystalUI::Application
           -webkit-text-fill-color: transparent;
         }
 
+        body[data-theme="dark"] h1 {
+          background: linear-gradient(135deg, #93c5fd, #60a5fa);
+          -webkit-background-clip: text;
+        }
+
         .subtitle {
           margin: 0 0 2rem;
           color: var(--blue-800);
           font-size: 1rem;
           line-height: 1.5;
           opacity: 0.85;
+        }
+
+        body[data-theme="dark"] .subtitle {
+          color: #cbd5e1;
         }
 
         .button {
@@ -195,6 +285,7 @@ class HelloApp < CrystalUI::Application
           box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.45);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
           overflow: hidden;
+          margin: 0.25rem;
         }
 
         .button:hover {
@@ -273,34 +364,47 @@ class HelloApp < CrystalUI::Application
           Crystal Host owns state and logic.<br>
           WebKitGTK is just a thin native shim.
         </p>
-        <button class="button" id="actionBtn" onclick="sendCommand()">
-          <span class="spinner"></span>
-          <span class="label">Call Crystal Host</span>
-        </button>
+        <div>
+          <button class="button" id="actionBtn" onclick="sendCommand()">
+            <span class="spinner"></span>
+            <span class="label">Call Crystal Host</span>
+          </button>
+          <button class="button" id="themeBtn" onclick="toggleTheme()">
+            Toggle Theme
+          </button>
+        </div>
         <div class="result" id="result">Click the button to invoke a Crystal command</div>
       </main>
 
       <script>
-        window.__crystalResolve = function(id, success, data, error) {
-          const btn = document.getElementById('actionBtn');
-          const result = document.getElementById('result');
-          btn.classList.remove('loading');
-          result.classList.add('success');
-          result.innerHTML = '<strong>Crystal answered:</strong><br>' +
-            Object.entries(data).map(([k, v]) => k + ': ' + v).join('<br>');
-        };
+        #{runtime_js}
+      </script>
+      <script>
+        #{hydrate_js};
+        document.body.setAttribute('data-theme', CrystalUI.state.settings.theme);
 
-        function sendCommand() {
+        CrystalUI.on('state.settings.theme', function(theme) {
+          document.body.setAttribute('data-theme', theme);
+        });
+      </script>
+      <script>
+        async function sendCommand() {
           const btn = document.getElementById('actionBtn');
           const result = document.getElementById('result');
           btn.classList.add('loading');
           result.classList.remove('success');
           result.textContent = 'Talking to the Crystal Host...';
-          window.webkit.messageHandlers.crystal.postMessage({
-            id: 'cmd-' + Date.now(),
-            name: 'hello',
-            args: {}
-          });
+          const data = await CrystalUI.call('hello', {});
+          btn.classList.remove('loading');
+          result.classList.add('success');
+          result.innerHTML = '<strong>Crystal answered:</strong><br>' +
+            Object.entries(data).map(([k, v]) => k + ': ' + v).join('<br>');
+        }
+
+        async function toggleTheme() {
+          const current = await CrystalUI.settings.current_theme();
+          const next = current === 'dark' ? 'light' : 'dark';
+          await CrystalUI.settings.set_theme({ theme: next });
         }
       </script>
     </body>

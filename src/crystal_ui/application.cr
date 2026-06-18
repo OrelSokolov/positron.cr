@@ -76,6 +76,22 @@ module CrystalUI
       host.tray
     end
 
+    # Access the shared state manager.
+    def state_manager : StateManager
+      host.state_manager
+    end
+
+    # Convenience helper to register a plugin.
+    def register_plugin(plugin : Plugin)
+      plugins.register(plugin)
+    end
+
+    # Inject the CrystalUI JS runtime and hydrate state.
+    # Call this inside on_ready after navigating the webview.
+    def inject_js_runtime
+      host.inject_js_runtime
+    end
+
     # Run the application.
     def run
       DesktopHost.new(self).run

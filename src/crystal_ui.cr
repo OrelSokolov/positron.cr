@@ -3,8 +3,10 @@ require "log"
 
 require "./crystal_ui/event_bus"
 require "./crystal_ui/command_registry"
+require "./crystal_ui/state_manager"
 require "./crystal_ui/plugin"
 require "./crystal_ui/tray_item"
+require "./crystal_ui/js_facade_generator"
 require "./crystal_ui/ports/webview_port"
 require "./crystal_ui/ports/tray_port"
 
