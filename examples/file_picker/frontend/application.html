@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>File Picker Demo</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">{{ICON_HTML}}</div>
+    <h1>Text File Viewer</h1>
+    <p class="subtitle">
+      Select a <code>.txt</code> file.<br>
+      The Crystal Host reads it and sends the contents back as a host event.
+    </p>
+
+    <button class="button" id="pickBtn" onclick="pickFile()">
+      Choose .txt file
+    </button>
+
+    <div class="status" id="status">Ready</div>
+    <div class="meta" id="meta"></div>
+
+    <textarea class="viewer" id="viewer" readonly placeholder="File contents will appear here…"></textarea>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+:root {
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-300: #93c5fd;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+  --blue-800: #1e40af;
+  --blue-900: #1e3a8a;
+  --shadow: 0 25px 50px -12px rgba(29, 78, 216, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: radial-gradient(ellipse at top, var(--blue-50), #ffffff),
+              linear-gradient(135deg, #ffffff 0%, var(--blue-100) 100%);
+  overflow-x: hidden;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 92vw);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 2rem;
+  box-shadow: var(--shadow);
+  animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.logo {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+  animation: float 4s ease-in-out infinite;
+  filter: drop-shadow(0 12px 24px rgba(37, 99, 235, 0.3));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.logo svg { width: 100%; height: 100%; }
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--blue-900);
+}
+
+.subtitle {
+  margin: 0 0 1.75rem;
+  color: var(--blue-800);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.section {
+  text-align: left;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 1rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -5px rgba(37, 99, 235, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -5px rgba(37, 99, 235, 0.5);
+}
+
+.button.small {
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+
+.text-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--blue-900);
+  background: #ffffff;
+  border: 1px solid var(--blue-200);
+  border-radius: 0.75rem;
+  resize: vertical;
+  outline: none;
+}
+
+.text-input:focus {
+  border-color: var(--blue-400);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  padding: 1rem;
+  color: var(--blue-700);
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px dashed var(--blue-300);
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.image-thumb {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.2);
+}
+
+.file-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--blue-900);
+  font-size: 0.9rem;
+}
+
+.file-list li {
+  margin-bottom: 0.35rem;
+  word-break: break-all;
+}
+
+.status {
+  margin-top: 0.5rem;
+  min-height: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--blue-700);
+  opacity: 0.85;
+}

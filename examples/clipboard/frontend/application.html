@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CrystalUI Clipboard</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">{{ICON_HTML}}</div>
+    <h1>Clipboard</h1>
+    <p class="subtitle">
+      Paste text or images from the OS clipboard.<br>
+      Crystal Host reads the clipboard through the native GTK shim.
+    </p>
+
+    <section class="section">
+      <div class="row">
+        <h2>Text</h2>
+        <button class="button small" onclick="pasteText()">Paste Text</button>
+      </div>
+      <textarea id="textInput" class="text-input" rows="5" placeholder="Paste text here (Ctrl+V or click the button)..."></textarea>
+    </section>
+
+    <section class="section">
+      <div class="row">
+        <h2>Image</h2>
+        <button class="button small" onclick="pasteImage()">Paste Image</button>
+      </div>
+      <div id="imagePlaceholder" class="image-placeholder">
+        <span>Paste an image here (Ctrl+V or click the button)</span>
+      </div>
+      <img id="imageThumb" class="image-thumb" alt="Clipboard image" style="display: none;">
+    </section>
+
+    <section class="section">
+      <div class="row">
+        <h2>Files</h2>
+        <button class="button small" onclick="pasteFiles()">Paste Files</button>
+      </div>
+      <ul id="fileList" class="file-list"></ul>
+    </section>
+
+    <div class="status" id="status">Ready</div>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>

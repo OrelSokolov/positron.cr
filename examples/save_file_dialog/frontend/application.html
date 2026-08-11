@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Save File Dialog Demo</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">{{ICON_HTML}}</div>
+    <h1>Save File Dialog</h1>
+    <p class="subtitle">
+      Type some text below, then save it through the native OS save dialog.
+    </p>
+
+    <input type="text" class="filename" id="filename" value="note.txt" placeholder="Suggested file name">
+
+    <textarea class="editor" id="editor" placeholder="Write something here…">Hello from CrystalUI!</textarea>
+
+    <button class="button" id="saveBtn" onclick="saveFile()">
+      Save to file…
+    </button>
+
+    <div class="status" id="status">Ready</div>
+    <div class="meta" id="meta"></div>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>

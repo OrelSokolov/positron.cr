@@ -16,3 +16,28 @@ async function toggleTheme() {
   const next = current === 'dark' ? 'light' : 'dark';
   await CrystalUI.settings.set_theme({ theme: next });
 }
+
+async function saveGreeting() {
+  const name = prompt('What is your name?');
+  if (!name) return;
+
+  const result = document.getElementById('result');
+  result.classList.remove('success');
+  result.textContent = 'Saving...';
+
+  await CrystalUI.preferences.set({ key: 'greeting', value: name });
+
+  result.classList.add('success');
+  result.textContent = 'Saved greeting for ' + name;
+}
+
+async function loadGreeting() {
+  const result = document.getElementById('result');
+  result.classList.remove('success');
+  result.textContent = 'Loading...';
+
+  const name = await CrystalUI.preferences.get({ key: 'greeting', default: 'stranger' });
+
+  result.classList.add('success');
+  result.innerHTML = '<strong>Hello, ' + name + '!</strong><br>Loaded from persistent storage.';
+}

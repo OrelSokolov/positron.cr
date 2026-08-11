@@ -33,6 +33,8 @@ module CrystalUI
         "    });",
         "  }",
         "",
+        "  window.__crystalNotify = notify;",
+        "",
         "  window.__crystalResolve = function(id, success, data, error) {",
         "    const p = pending.get(id);",
         "    if (!p) return;",

@@ -26,6 +26,7 @@ This repository contains a working Linux desktop implementation of the
 | Desktop Host | `src/crystal_ui/desktop_host.cr` | Wires WebView, tray, commands, EventBus |
 | Mobile Host | `src/crystal_ui/mobile_host.cr` | Base for Android/iOS host integration |
 | Linux EventLoop | `src/crystal_ui/event_loop/linux.cr` | GTK main loop + Crystal fiber idle source |
+| Clipboard Plugin | `src/crystal_ui/plugins/clipboard/` | Text / image / file clipboard access |
 | WebView Adapter | `src/crystal_ui/adapters/linux/webkit_gtk.cr` | WebKitGTK 4.1 with generic JS bridge shim |
 | Tray Adapter | `src/crystal_ui/adapters/linux/app_indicator_tray.cr` | Ayatana AppIndicator |
 | Windows Adapters (stub) | `src/crystal_ui/adapters/windows/` | WebView2 + NotifyIcon placeholders |
@@ -68,6 +69,16 @@ Or with the bundled compiler:
 ```
 
 A GTK window with a WebKitGTK web view and a system tray icon will appear.
+
+### Clipboard demo
+
+```bash
+crystal build examples/clipboard.cr -o examples/clipboard-bin
+./examples/clipboard-bin
+```
+
+Copy text or an image to the system clipboard, then press `Ctrl+V` inside the
+webview (or use the buttons) to paste it back through the Crystal Host.
 Clicking the button in the web page sends a JSON message to the Crystal Host
 via the generic `CrystalBridge.postMessage` runtime, which the Linux adapter
 wires to `window.webkit.messageHandlers.crystal.postMessage` under the hood.

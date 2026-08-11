@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CrystalUI Display Info</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">{{ICON_HTML}}</div>
+    <h1>Display Info</h1>
+    <p class="subtitle">
+      System screen information from the native OS.<br>
+      DPI, resolution, monitors, orientation and more.
+    </p>
+
+    <section class="summary" id="summary">
+      <div class="summary-item">
+        <span class="label">Monitors</span>
+        <span class="value" id="monitorCount">-</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">Virtual desktop</span>
+        <span class="value" id="virtualSize">-</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">Orientation</span>
+        <span class="value" id="orientation">-</span>
+      </div>
+    </section>
+
+    <section class="monitors" id="monitors">
+      <!-- Monitor cards are rendered here. -->
+    </section>
+
+    <div class="actions">
+      <button class="button" onclick="refreshInfo()">Refresh</button>
+    </div>
+
+    <div class="status" id="status">Ready</div>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>

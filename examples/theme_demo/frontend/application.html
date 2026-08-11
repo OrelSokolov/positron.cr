@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CrystalUI Theme Demo</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">{{ICON_HTML}}</div>
+    <h1>System Theme</h1>
+    <p class="subtitle">Query the OS appearance through the Crystal Host.</p>
+    <button class="button" id="refreshBtn" onclick="refreshTheme()">Refresh</button>
+    <div class="result" id="result">Click Refresh to read the system theme.</div>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>
