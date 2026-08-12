@@ -6,7 +6,7 @@ require "../../src/crystal_ui/plugins/notifications/plugin"
 
 class SystemNotificationsApp < CrystalUI::Application
   # Embed frontend/application.html, application.css, application.js and icon.
-  embed_application_files(__DIR__, "../../assets/crystal-icon.svg")
+  embed_application_files(__DIR__, "../../assets/crystal-icon")
 
   def configure_plugins
     use CrystalUI::Plugins::Logger
@@ -18,28 +18,27 @@ class SystemNotificationsApp < CrystalUI::Application
   end
 
   def on_ready
-    webview.create(
+    webview.create(CrystalUI::WebViewConfig.new(
       title: "System Notifications — CrystalUI",
       width: 900,
       height: 640,
-      icon_path: icon_path
-    )
+      icon: icon_source(:svg)
+    ))
 
     webview.bind("crystal") do |json|
       STDOUT.puts "[Crystal Host] received from JS: #{json}"
       STDOUT.flush
-      CrystalUI::EventBus.emit("command.invoked", JSON.parse(json))
-      ""
+      host.dispatch(json)
     end
 
-    webview.navigate("data:text/html,#{URI.encode_path(application_html)}")
+    webview.load_html(application_html)
 
     CrystalUI::EventBus.on("notification.clicked") do |payload|
       STDOUT.puts "[Crystal Host] notification clicked: #{payload}"
       STDOUT.flush
     end
 
-    tray.set_icon(icon_bytes)
+    tray.set_icon(icon_source(:svg))
     tray.set_title("Notifications")
     tray.add_or_update_item(CrystalUI::TrayItem.new(id: 1, title: "Open"))
     tray.add_or_update_item(CrystalUI::TrayItem.new(id: 2, title: "Quit"))

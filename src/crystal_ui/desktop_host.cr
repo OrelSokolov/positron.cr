@@ -28,6 +28,7 @@ module CrystalUI
 
     def run
       @app.on_ready
+      @plugins.each(&.on_ready(self))
       @event_loop.run
     end
 

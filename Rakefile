@@ -88,3 +88,10 @@ end
 
 desc "Build all examples (alias for build:examples)"
 task examples: "build:examples"
+
+desc "Run the test suite"
+task :spec do
+  sh "#{CRYSTAL_CMD} spec"
+end
+
+task :test => :spec
