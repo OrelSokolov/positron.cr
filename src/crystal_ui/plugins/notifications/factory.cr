@@ -1,9 +1,22 @@
 require "./adapter"
-require "./linux"
-require "./macos"
-require "./windows"
-require "./android"
-require "./ios"
+
+# Platform adapter sources are gated by target flags so their @[Link]
+# annotations (Linux C libs) never reach non-Linux builds.
+{% if flag?(:linux) && !flag?(:android) %}
+  require "./linux"
+{% end %}
+{% if flag?(:darwin) && !flag?(:ios) %}
+  require "./macos"
+{% end %}
+{% if flag?(:win32) %}
+  require "./windows"
+{% end %}
+{% if flag?(:android) %}
+  require "./android"
+{% end %}
+{% if flag?(:ios) %}
+  require "./ios"
+{% end %}
 
 module CrystalUI::Plugins
   # Compile-time factory that picks the correct native notification adapter

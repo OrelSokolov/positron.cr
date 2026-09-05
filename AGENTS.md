@@ -22,6 +22,11 @@ crystal build examples/hello/hello.cr -o examples/hello/hello
 All 8 examples must build cleanly and all specs must pass before a change
 is considered done.
 
+CI (`.github/workflows/ci.yml`) runs `crystal spec` and builds all examples
+on Ubuntu, macOS and Windows runners. Non-Linux jobs build against the
+adapter stubs; plugin factories gate platform requires by target flags so
+Linux C libraries never leak into non-Linux link lines.
+
 ## Requirements
 
 - Crystal >= 1.10
