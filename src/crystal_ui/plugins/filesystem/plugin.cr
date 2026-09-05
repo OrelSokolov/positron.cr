@@ -42,11 +42,11 @@ module CrystalUI::Plugins
       content_arg = CrystalUI::ArgumentManifest.new(name: "content", type: "String")
 
       {
-        "fs.home_dir" => CrystalUI::CommandManifest.new(name: "fs.home_dir", returns: "String"),
-        "fs.temp_dir" => CrystalUI::CommandManifest.new(name: "fs.temp_dir", returns: "String"),
-        "fs.app_data_dir" => CrystalUI::CommandManifest.new(name: "fs.app_data_dir", returns: "String"),
+        "fs.home_dir"      => CrystalUI::CommandManifest.new(name: "fs.home_dir", returns: "String"),
+        "fs.temp_dir"      => CrystalUI::CommandManifest.new(name: "fs.temp_dir", returns: "String"),
+        "fs.app_data_dir"  => CrystalUI::CommandManifest.new(name: "fs.app_data_dir", returns: "String"),
         "fs.app_cache_dir" => CrystalUI::CommandManifest.new(name: "fs.app_cache_dir", returns: "String"),
-        "fs.read" => CrystalUI::CommandManifest.new(
+        "fs.read"          => CrystalUI::CommandManifest.new(
           name: "fs.read", args: [path_arg], returns: "String"),
         "fs.write" => CrystalUI::CommandManifest.new(
           name: "fs.write", args: [path_arg, content_arg], returns: "Bool"),
@@ -126,8 +126,8 @@ module CrystalUI::Plugins
         path = safe_path(str(args, "path"))
         info = File.info(path)
         JSON.parse({
-          size:    info.size,
-          dir:     info.directory?,
+          size:     info.size,
+          dir:      info.directory?,
           modified: info.modification_time.to_unix,
         }.to_json)
       end
@@ -145,19 +145,19 @@ module CrystalUI::Plugins
 
     def app_data_dir : String
       base = {% if flag?(:linux) && !flag?(:android) %}
-        ENV["XDG_DATA_HOME"]? || File.join(home_dir, ".local", "share")
-      {% else %}
-        ENV["CRYSTAL_UI_DATA"]? || File.join(home_dir, ".local", "share")
-      {% end %}
+               ENV["XDG_DATA_HOME"]? || File.join(home_dir, ".local", "share")
+             {% else %}
+               ENV["CRYSTAL_UI_DATA"]? || File.join(home_dir, ".local", "share")
+             {% end %}
       File.join(base, @app_id)
     end
 
     def app_cache_dir : String
       base = {% if flag?(:linux) && !flag?(:android) %}
-        ENV["XDG_CACHE_HOME"]? || File.join(home_dir, ".cache")
-      {% else %}
-        ENV["CRYSTAL_UI_CACHE"]? || File.join(home_dir, ".cache")
-      {% end %}
+               ENV["XDG_CACHE_HOME"]? || File.join(home_dir, ".cache")
+             {% else %}
+               ENV["CRYSTAL_UI_CACHE"]? || File.join(home_dir, ".cache")
+             {% end %}
       File.join(base, @app_id)
     end
 

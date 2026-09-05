@@ -99,83 +99,83 @@ end
 
 {% if flag?(:unix) %}
   describe CrystalUI::Plugins::SecureStorage do
-  it "stores and retrieves secrets across plugin instances" do
-    data_home = temp_dir()
-    old_data = ENV["XDG_DATA_HOME"]?
-    old_key = ENV["CRYSTAL_UI_STORAGE_KEY"]?
-    ENV["XDG_DATA_HOME"] = data_home
-    ENV["CRYSTAL_UI_STORAGE_KEY"] = "spec-passphrase"
+    it "stores and retrieves secrets across plugin instances" do
+      data_home = temp_dir()
+      old_data = ENV["XDG_DATA_HOME"]?
+      old_key = ENV["CRYSTAL_UI_STORAGE_KEY"]?
+      ENV["XDG_DATA_HOME"] = data_home
+      ENV["CRYSTAL_UI_STORAGE_KEY"] = "spec-passphrase"
 
-    plugin = CrystalUI::Plugins::SecureStorage.new(app_id: "specapp")
+      plugin = CrystalUI::Plugins::SecureStorage.new(app_id: "specapp")
 
-    set = dispatch_command(plugin, "secure_storage.set", {"key" => "token", "value" => "abc123"})
-    set.data.as_bool.should be_true
+      set = dispatch_command(plugin, "secure_storage.set", {"key" => "token", "value" => "abc123"})
+      set.data.as_bool.should be_true
 
-    get = dispatch_command(plugin, "secure_storage.get", {"key" => "token"})
-    get.data.as_s.should eq("abc123")
+      get = dispatch_command(plugin, "secure_storage.get", {"key" => "token"})
+      get.data.as_s.should eq("abc123")
 
-    # Fresh instance reads the same persisted store.
-    reloaded = dispatch_command(CrystalUI::Plugins::SecureStorage.new(app_id: "specapp"),
-      "secure_storage.get", {"key" => "token"})
-    reloaded.data.as_s.should eq("abc123")
+      # Fresh instance reads the same persisted store.
+      reloaded = dispatch_command(CrystalUI::Plugins::SecureStorage.new(app_id: "specapp"),
+        "secure_storage.get", {"key" => "token"})
+      reloaded.data.as_s.should eq("abc123")
 
-    has = dispatch_command(plugin, "secure_storage.has", {"key" => "token"})
-    has.data.as_bool.should be_true
+      has = dispatch_command(plugin, "secure_storage.has", {"key" => "token"})
+      has.data.as_bool.should be_true
 
-    removed = dispatch_command(plugin, "secure_storage.remove", {"key" => "token"})
-    removed.data.as_bool.should be_true
+      removed = dispatch_command(plugin, "secure_storage.remove", {"key" => "token"})
+      removed.data.as_bool.should be_true
 
-    gone = dispatch_command(plugin, "secure_storage.get", {"key" => "token"})
-    gone.data.to_json.should eq("null")
+      gone = dispatch_command(plugin, "secure_storage.get", {"key" => "token"})
+      gone.data.to_json.should eq("null")
 
-    # The stored file must not contain the secret in plaintext.
-    stored = File.read(File.join(data_home, "specapp", "secure-storage.bin"))
-    stored.should_not contain("abc123")
+      # The stored file must not contain the secret in plaintext.
+      stored = File.read(File.join(data_home, "specapp", "secure-storage.bin"))
+      stored.should_not contain("abc123")
 
-    ENV["XDG_DATA_HOME"] = old_data
-    ENV["CRYSTAL_UI_STORAGE_KEY"] = old_key
-    FileUtils.rm_rf(data_home)
+      ENV["XDG_DATA_HOME"] = old_data
+      ENV["CRYSTAL_UI_STORAGE_KEY"] = old_key
+      FileUtils.rm_rf(data_home)
+    end
   end
-end
 {% end %}
 
 {% if flag?(:unix) %}
   describe CrystalUI::Plugins::DeepLinks do
-  it "grants the socket to the first instance only" do
-    runtime_dir = temp_dir()
-    old_runtime = ENV["XDG_RUNTIME_DIR"]?
-    ENV["XDG_RUNTIME_DIR"] = runtime_dir
+    it "grants the socket to the first instance only" do
+      runtime_dir = temp_dir()
+      old_runtime = ENV["XDG_RUNTIME_DIR"]?
+      ENV["XDG_RUNTIME_DIR"] = runtime_dir
 
-    first = CrystalUI::Plugins::DeepLinks.new(app_id: "specapp")
-    first.single_instance?.should be_true
+      first = CrystalUI::Plugins::DeepLinks.new(app_id: "specapp")
+      first.single_instance?.should be_true
 
-    # The socket exists and answers connections.
-    sock_path = File.join(runtime_dir, "crystalui-specapp.sock")
-    File.exists?(sock_path).should be_true
-    client = UNIXSocket.new(sock_path)
-    client.close
+      # The socket exists and answers connections.
+      sock_path = File.join(runtime_dir, "crystalui-specapp.sock")
+      File.exists?(sock_path).should be_true
+      client = UNIXSocket.new(sock_path)
+      client.close
 
-    # A second instance with the same app id loses the handshake.
-    second = CrystalUI::Plugins::DeepLinks.new(app_id: "specapp")
-    second.single_instance?.should be_false
+      # A second instance with the same app id loses the handshake.
+      second = CrystalUI::Plugins::DeepLinks.new(app_id: "specapp")
+      second.single_instance?.should be_false
 
-    ENV["XDG_RUNTIME_DIR"] = old_runtime
-    FileUtils.rm_rf(runtime_dir)
+      ENV["XDG_RUNTIME_DIR"] = old_runtime
+      FileUtils.rm_rf(runtime_dir)
+    end
+
+    it "collects scheme URLs from argv" do
+      old_argv = ARGV.dup
+      runtime_dir = temp_dir()
+      old_runtime = ENV["XDG_RUNTIME_DIR"]?
+      ENV["XDG_RUNTIME_DIR"] = runtime_dir
+      ARGV.replace(["myapp://open/x", "--flag", "myapp://open/y"])
+
+      plugin = CrystalUI::Plugins::DeepLinks.new(app_id: "specapp2", scheme: "myapp")
+      plugin.pending.should eq(["myapp://open/x", "myapp://open/y"])
+
+      ARGV.replace(old_argv)
+      ENV["XDG_RUNTIME_DIR"] = old_runtime
+      FileUtils.rm_rf(runtime_dir)
+    end
   end
-
-  it "collects scheme URLs from argv" do
-    old_argv = ARGV.dup
-    runtime_dir = temp_dir()
-    old_runtime = ENV["XDG_RUNTIME_DIR"]?
-    ENV["XDG_RUNTIME_DIR"] = runtime_dir
-    ARGV.replace(["myapp://open/x", "--flag", "myapp://open/y"])
-
-    plugin = CrystalUI::Plugins::DeepLinks.new(app_id: "specapp2", scheme: "myapp")
-    plugin.pending.should eq(["myapp://open/x", "myapp://open/y"])
-
-    ARGV.replace(old_argv)
-    ENV["XDG_RUNTIME_DIR"] = old_runtime
-    FileUtils.rm_rf(runtime_dir)
-  end
-end
 {% end %}

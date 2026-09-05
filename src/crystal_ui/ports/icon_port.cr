@@ -7,7 +7,7 @@ module CrystalUI
   # current platform. The compile-time `embed_application_files` macro uses
   # it to pick the right icon asset automatically.
   class IconPort
-    PREFERRED_FORMAT = :svg
+    PREFERRED_FORMAT    = :svg
     PREFERRED_EXTENSION = ".svg"
   end
 end

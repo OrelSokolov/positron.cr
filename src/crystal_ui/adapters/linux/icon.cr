@@ -5,7 +5,7 @@ module CrystalUI
       #
       # GTK can render SVG directly, so SVG is the preferred source format.
       class Icon < IconPort
-        PREFERRED_FORMAT = :svg
+        PREFERRED_FORMAT    = :svg
         PREFERRED_EXTENSION = ".svg"
       end
     end

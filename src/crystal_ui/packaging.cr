@@ -22,8 +22,7 @@ module CrystalUI
       terminal : Bool = false,
       schemes : Array(String) = [] of String
     ) : String
-      mime = schemes.empty? ? "" :
-        "MimeType=#{schemes.map { |s| "x-scheme-handler/#{s}" }.join(";")};\n"
+      mime = schemes.empty? ? "" : "MimeType=#{schemes.map { |s| "x-scheme-handler/#{s}" }.join(";")};\n"
 
       <<-DESKTOP
         [Desktop Entry]

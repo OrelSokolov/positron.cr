@@ -22,11 +22,11 @@ module CrystalUI::CLI
     rest = args[1..]
 
     case command
-    when "init"     then init(rest)
-    when "dev"      then dev
-    when "build"    then build
-    when "doctor"   then doctor
-    when "package"  then package(rest)
+    when "init"    then init(rest)
+    when "dev"     then dev
+    when "build"   then build
+    when "doctor"  then doctor
+    when "package" then package(rest)
     when "help", "--help", "-h"
       puts usage
     when "version", "--version", "-v"

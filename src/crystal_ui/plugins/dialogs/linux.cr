@@ -26,7 +26,7 @@ module CrystalUI::Plugins
              end
 
       dialog = LibGTK.gtk_message_dialog_new(
-        Pointer(Void).null,           # no parent window
+        Pointer(Void).null, # no parent window
         GTK_DIALOG_MODAL,
         type,
         GTK_BUTTONS_OK,

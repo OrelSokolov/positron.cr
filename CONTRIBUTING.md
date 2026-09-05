@@ -14,7 +14,17 @@ rake build:examples
 
 # Run the test suite (headless, no GUI required)
 rake spec
+
+# Fast pre-commit verification: format check + specs
+rake precommit
+
+# Install the git pre-commit hook (runs `rake precommit` on commit)
+rake hooks_install
 ```
+
+A `pre-commit` hook ships in `.githooks/`; `rake hooks_install` points
+`core.hooksPath` at it. It runs the format check and specs only when
+staged files touch `src/` or `spec/`; bypass with `git commit --no-verify`.
 
 All 8 examples must build cleanly and all specs must pass before a change
 is considered done.

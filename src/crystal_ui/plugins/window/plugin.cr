@@ -44,7 +44,7 @@ module CrystalUI::Plugins
             CrystalUI::ArgumentManifest.new(name: "height", type: "Int32"),
           ],
         ),
-        "window.center" => CrystalUI::CommandManifest.new(name: "window.center"),
+        "window.center"           => CrystalUI::CommandManifest.new(name: "window.center"),
         "window.set_minimum_size" => CrystalUI::CommandManifest.new(
           name: "window.set_minimum_size",
           args: [
@@ -59,14 +59,14 @@ module CrystalUI::Plugins
             CrystalUI::ArgumentManifest.new(name: "height", type: "Int32"),
           ],
         ),
-        "window.maximize" => CrystalUI::CommandManifest.new(name: "window.maximize"),
-        "window.unmaximize" => CrystalUI::CommandManifest.new(name: "window.unmaximize"),
+        "window.maximize"     => CrystalUI::CommandManifest.new(name: "window.maximize"),
+        "window.unmaximize"   => CrystalUI::CommandManifest.new(name: "window.unmaximize"),
         "window.is_maximized" => CrystalUI::CommandManifest.new(
           name: "window.is_maximized",
           returns: "Bool",
         ),
-        "window.fullscreen" => CrystalUI::CommandManifest.new(name: "window.fullscreen"),
-        "window.unfullscreen" => CrystalUI::CommandManifest.new(name: "window.unfullscreen"),
+        "window.fullscreen"        => CrystalUI::CommandManifest.new(name: "window.fullscreen"),
+        "window.unfullscreen"      => CrystalUI::CommandManifest.new(name: "window.unfullscreen"),
         "window.set_always_on_top" => CrystalUI::CommandManifest.new(
           name: "window.set_always_on_top",
           args: [CrystalUI::ArgumentManifest.new(name: "enabled", type: "Bool")],
@@ -75,7 +75,7 @@ module CrystalUI::Plugins
           name: "window.set_decorated",
           args: [CrystalUI::ArgumentManifest.new(name: "enabled", type: "Bool")],
         ),
-        "window.focus" => CrystalUI::CommandManifest.new(name: "window.focus"),
+        "window.focus"    => CrystalUI::CommandManifest.new(name: "window.focus"),
         "window.get_size" => CrystalUI::CommandManifest.new(
           name: "window.get_size",
           returns: "Object",
@@ -84,112 +84,114 @@ module CrystalUI::Plugins
           name: "window.get_position",
           returns: "Object",
         ),
-        "window.open_devtools" => CrystalUI::CommandManifest.new(name: "window.open_devtools"),
+        "window.open_devtools"  => CrystalUI::CommandManifest.new(name: "window.open_devtools"),
         "window.close_devtools" => CrystalUI::CommandManifest.new(name: "window.close_devtools"),
       }
     end
 
+    # Blocks return JSON::Any directly (never nil) so the command block's
+    # Proc type is fully explicit — newer Crystal compilers reject
+    # uninferred block return types here.
     def bind(registry : CrystalUI::CommandRegistry, state : CrystalUI::StateManager)
       register registry, "window.set_title" do |webview, args|
         webview.set_title(arg_string(args, "title"))
-        nil
+        void
       end
 
       register registry, "window.resize" do |webview, args|
         webview.resize(arg_int(args, "width"), arg_int(args, "height"))
-        nil
+        void
       end
 
       register registry, "window.center" do |webview, _args|
         webview.center
-        nil
+        void
       end
 
       register registry, "window.set_minimum_size" do |webview, args|
         webview.set_minimum_size(arg_int(args, "width"), arg_int(args, "height"))
-        nil
+        void
       end
 
       register registry, "window.set_maximum_size" do |webview, args|
         webview.set_maximum_size(arg_int(args, "width"), arg_int(args, "height"))
-        nil
+        void
       end
 
       register registry, "window.maximize" do |webview, _args|
         webview.maximize
-        nil
+        void
       end
 
       register registry, "window.unmaximize" do |webview, _args|
         webview.unmaximize
-        nil
+        void
       end
 
       register registry, "window.is_maximized" do |webview, _args|
-        webview.maximized?
+        json(webview.maximized?)
       end
 
       register registry, "window.fullscreen" do |webview, _args|
         webview.fullscreen
-        nil
+        void
       end
 
       register registry, "window.unfullscreen" do |webview, _args|
         webview.unfullscreen
-        nil
+        void
       end
 
       register registry, "window.set_always_on_top" do |webview, args|
         webview.set_always_on_top(arg_bool(args, "enabled"))
-        nil
+        void
       end
 
       register registry, "window.set_decorated" do |webview, args|
         webview.set_decorated(arg_bool(args, "enabled"))
-        nil
+        void
       end
 
       register registry, "window.focus" do |webview, _args|
         webview.focus
-        nil
+        void
       end
 
       register registry, "window.get_size" do |webview, _args|
         width, height = webview.size
-        {width: width, height: height}
+        json({width: width, height: height})
       end
 
       register registry, "window.get_position" do |webview, _args|
         x, y = webview.position
-        {x: x, y: y}
+        json({x: x, y: y})
       end
 
       register registry, "window.open_devtools" do |webview, _args|
         webview.open_devtools
-        nil
+        void
       end
 
       register registry, "window.close_devtools" do |webview, _args|
         webview.close_devtools
-        nil
+        void
       end
     end
 
-    # Register a window command. The block receives the WebViewPort; its
-    # return value becomes the command data (nil → empty object). When the
-    # platform adapter does not implement the capability, the call raises
-    # and the command resolves with an error on the JS side.
+    # Register a window command. The block receives the WebViewPort and
+    # returns the command data as JSON::Any. When the platform adapter
+    # does not implement the capability, the call raises and the command
+    # resolves with an error on the JS side.
     private def register(registry : CrystalUI::CommandRegistry, name : String,
-                         &block : CrystalUI::WebViewPort, JSON::Any -> _)
+                         &block : CrystalUI::WebViewPort, JSON::Any -> JSON::Any)
       registry.register(name) do |request|
         webview = host.try(&.webview)
         next unsupported(name) unless webview
 
         begin
-          data = block.call(webview, request.args)
           CrystalUI::CommandResult.new(
             success: true,
-            data: data.nil? ? JSON.parse("{}") : JSON.parse(data.to_json)
+            data: block.call(webview, request.args)
           )
         rescue ex
           CrystalUI::CommandResult.new(
@@ -199,6 +201,14 @@ module CrystalUI::Plugins
           )
         end
       end
+    end
+
+    private def void : JSON::Any
+      JSON.parse("{}")
+    end
+
+    private def json(value) : JSON::Any
+      JSON.parse(value.to_json)
     end
 
     private def unsupported(name : String)

@@ -105,3 +105,17 @@ task :spec do
 end
 
 task :test => :spec
+
+desc "Check formatting without modifying files (as CI would)"
+task :format_check do
+  sh "#{CRYSTAL_CMD} tool format --check src spec"
+end
+
+desc "Fast pre-commit verification: format check + specs"
+task :precommit => [:format_check, :spec]
+
+desc "Install the git hooks from .githooks/ (sets core.hooksPath)"
+task :hooks_install do
+  sh "git config core.hooksPath .githooks"
+  puts "Git hooks installed from .githooks/ (pre-commit runs 'rake precommit')"
+end

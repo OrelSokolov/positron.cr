@@ -15,7 +15,9 @@ class NullWebView < CrystalUI::WebViewPort
   property evals = [] of String
 
   def create(config : CrystalUI::WebViewConfig); end
+
   def load_url(url : String); end
+
   def load_html(html : String, base_url : String? = nil); end
 
   def eval_js(script : String)
@@ -23,8 +25,11 @@ class NullWebView < CrystalUI::WebViewPort
   end
 
   def show; end
+
   def hide; end
+
   def close; end
+
   def bind(name : String, &handler : String -> String); end
 end
 
@@ -34,17 +39,29 @@ class NullTray < CrystalUI::TrayPort
   end
 
   def create(icon : CrystalUI::IconSource? = nil, title : String? = nil); end
+
   def set_icon(icon : CrystalUI::IconSource); end
+
   def set_title(title : String); end
+
   def set_tooltip(tooltip : String); end
+
   def add_or_update_item(item : CrystalUI::TrayItem); end
+
   def add_separator(id : Int32); end
+
   def remove_item(id : Int32); end
+
   def show_item(id : Int32); end
+
   def hide_item(id : Int32); end
+
   def on_item_click(&block : Int32 ->); end
+
   def show; end
+
   def hide; end
+
   def quit; end
 end
 
@@ -69,6 +86,7 @@ class FakeHost < CrystalUI::Host
   end
 
   def run; end
+
   def stop; end
 end
 

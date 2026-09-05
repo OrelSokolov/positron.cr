@@ -375,8 +375,7 @@ module CrystalUI
             Pointer(Void).null, 0, GDK_ACTION_COPY)
           LibGTK.gtk_drag_dest_add_uri_targets(@window)
 
-          @drag_handler = ->(widget : Void*, context : Void*, x : Int32, y : Int32,
-                             data : Void*, info : UInt32, time : UInt32, user_data : Void*) do
+          @drag_handler = ->(widget : Void*, context : Void*, x : Int32, y : Int32, data : Void*, info : UInt32, time : UInt32, user_data : Void*) do
             webkit = Box(WebKitGTK).unbox(user_data)
             uris_ptr = LibGTK.gtk_selection_data_get_uris(data)
 
@@ -415,7 +414,8 @@ module CrystalUI
           URI.decode(uri.lchop("file://"))
         end
 
-        private def inject_bridge_shim(handler_name : String)          shim = <<-JS
+        private def inject_bridge_shim(handler_name : String)
+          shim = <<-JS
             window.CrystalBridge = window.CrystalBridge || {
               postMessage: function(jsonString) {
                 window.webkit.messageHandlers.#{handler_name}.postMessage(JSON.parse(jsonString));

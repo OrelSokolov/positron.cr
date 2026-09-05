@@ -16,9 +16,9 @@ module CrystalUI::Plugins
   # bool) bound by index. The database defaults to
   # `<app data dir>/<app_id>.db`; open is implicit on first use.
   class Sqlite < CrystalUI::Plugin
-    SQLITE_OK         =  0
-    SQLITE_ROW        = 100
-    SQLITE_DONE       = 101
+    SQLITE_OK             =   0
+    SQLITE_ROW            = 100
+    SQLITE_DONE           = 101
     SQLITE_OPEN_READWRITE = 0x2
     SQLITE_OPEN_CREATE    = 0x4
 
@@ -146,8 +146,8 @@ module CrystalUI::Plugins
 
       db = database
       {
-        rows_affected:   LibSQLite3.sqlite3_changes64(db),
-        last_insert_id:  LibSQLite3.sqlite3_last_insert_rowid(db),
+        rows_affected:  LibSQLite3.sqlite3_changes64(db),
+        last_insert_id: LibSQLite3.sqlite3_last_insert_rowid(db),
       }
     end
 
@@ -164,11 +164,11 @@ module CrystalUI::Plugins
 
     private def bind_param(stmt : Void*, index : Int32, value : JSON::Any) : Nil
       rc = case value.raw
-           when Nil        then LibSQLite3.sqlite3_bind_null(stmt, index)
-           when Bool       then LibSQLite3.sqlite3_bind_int(stmt, index, value.as_bool ? 1 : 0)
-           when Int64      then LibSQLite3.sqlite3_bind_int64(stmt, index, value.as_i64)
-           when Float64    then LibSQLite3.sqlite3_bind_double(stmt, index, value.as_f)
-           when String     then LibSQLite3.sqlite3_bind_text(stmt, index, value.as_s, -1, -1)
+           when Nil     then LibSQLite3.sqlite3_bind_null(stmt, index)
+           when Bool    then LibSQLite3.sqlite3_bind_int(stmt, index, value.as_bool ? 1 : 0)
+           when Int64   then LibSQLite3.sqlite3_bind_int64(stmt, index, value.as_i64)
+           when Float64 then LibSQLite3.sqlite3_bind_double(stmt, index, value.as_f)
+           when String  then LibSQLite3.sqlite3_bind_text(stmt, index, value.as_s, -1, -1)
            else
              LibSQLite3.sqlite3_bind_text(stmt, index, value.to_json, -1, -1)
            end

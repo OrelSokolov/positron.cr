@@ -84,6 +84,7 @@ jobs:
 
           # The CLI links no GUI stack — must build on every runner.
           echo "::group::Build crystal-ui CLI"
+          mkdir -p bin
           if crystal build src/crystal_ui/cli.cr -o bin/crystal-ui --no-color; then
             echo "crystal-ui: OK"
           else

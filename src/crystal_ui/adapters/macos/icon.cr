@@ -5,7 +5,7 @@ module CrystalUI
       #
       # NSStatusItem works best with a PNG template image.
       class Icon < IconPort
-        PREFERRED_FORMAT = :png
+        PREFERRED_FORMAT    = :png
         PREFERRED_EXTENSION = ".png"
       end
     end

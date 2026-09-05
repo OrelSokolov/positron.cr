@@ -10,6 +10,7 @@ module CrystalUI::Plugins
   module SecureStorageCrypto
     # PBKDF2-HMAC-SHA256 (RFC 2898 / RFC 8018).
     ITERATIONS = 100_000
+
     def self.pbkdf2_sha256(password : Bytes, salt : Bytes,
                            iterations : Int32, key_size : Int32) : Bytes
       output = Bytes.new(key_size)

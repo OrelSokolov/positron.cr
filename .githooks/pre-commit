@@ -1,0 +1,34 @@
+#!/bin/sh
+# CrystalUI pre-commit hook: format check + specs.
+# Installed via `rake hooks:install` (sets git core.hooksPath to .githooks).
+#
+# Bypass for WIP commits:  git commit --no-verify
+
+# Only run when Crystal sources or specs changed.
+changed=$(git diff --cached --name-only --diff-filter=ACMR |
+  grep -E '\.(cr)$' | grep -E '^(src|spec)/' || true)
+[ -z "$changed" ] && exit 0
+
+root=$(git rev-parse --show-toplevel)
+cd "$root" || exit 1
+
+CRYSTAL="${CRYSTAL_CMD:-crystal}"
+
+echo "== pre-commit: crystal tool format --check =="
+"$CRYSTAL" tool format --check src spec
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "pre-commit: formatting check failed."
+  echo "Run 'crystal tool format' and re-stage, or use --no-verify to bypass."
+  exit 1
+fi
+
+echo "== pre-commit: crystal spec =="
+"$CRYSTAL" spec --no-color
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "pre-commit: specs failed. Fix them or use --no-verify to bypass."
+  exit 1
+fi
+
+exit 0

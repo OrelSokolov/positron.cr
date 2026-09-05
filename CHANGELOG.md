@@ -17,6 +17,17 @@ project adheres to [Semantic Versioning](https://semver.org/).
   corresponding specs are flag-gated. CI installs `openssl@3` (with
   `PKG_CONFIG_PATH`) on macOS and `libsqlite3-dev` on Linux for the
   unix-gated specs, and builds the `crystal-ui` CLI on every runner.
+- Window plugin: command blocks now return explicit `JSON::Any` (was an
+  uninferred block return type), fixing compilation on newer Crystal
+  releases where the `-> _` inference is rejected.
+
+### Added
+
+- `rake precommit` (format check + specs) and `rake hooks_install`,
+  plus a `.githooks/pre-commit` hook that runs the checks when staged
+  files touch `src/` or `spec/` (bypass with `--no-verify`).
+- CI: `mkdir -p bin` before building the CLI (`bin/` is gitignored and
+  absent on fresh runners).
 
 ### Added
 

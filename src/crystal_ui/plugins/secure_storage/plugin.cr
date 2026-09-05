@@ -136,9 +136,9 @@ module CrystalUI::Plugins
 
       JSON.parse(String.new(SecureStorageCrypto.decrypt(key, iv, ciphertext)))
         .as_h.reduce({} of String => String) do |acc, (k, v)|
-          acc[k] = v.as_s? || v.to_s
-          acc
-        end
+        acc[k] = v.as_s? || v.to_s
+        acc
+      end
     rescue ex
       Log.for("crystalui.plugins.secure_storage").error {
         "store unreadable (wrong key or corrupt file): #{ex.message}"

@@ -23,10 +23,10 @@ module CrystalUI
 
     def self.crystal_type_to_ts(type : String?) : String
       case type
-      when "String"                      then "string"
-      when "Int32", "Int64", "Float64"   then "number"
-      when "Bool"                        then "boolean"
-      else                                    "any"
+      when "String"                    then "string"
+      when "Int32", "Int64", "Float64" then "number"
+      when "Bool"                      then "boolean"
+      else                                  "any"
       end
     end
 
