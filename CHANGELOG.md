@@ -11,6 +11,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Relicensed the project to MIT (`LICENSE`, `shard.yml`); previously the
   LICENSE file granted non-commercial rights only while `README.md`
   claimed MIT. All three now agree on MIT.
+- Windows/macOS CI builds: `deep_links` (unix sockets) and
+  `secure_storage` (OpenSSL) plugins are now required only on unix
+  targets, so Windows stub builds link no native libraries; the
+  corresponding specs are flag-gated. CI installs `openssl@3` (with
+  `PKG_CONFIG_PATH`) on macOS and `libsqlite3-dev` on Linux for the
+  unix-gated specs, and builds the `crystal-ui` CLI on every runner.
 
 ### Added
 

@@ -17,8 +17,12 @@ require "./crystal_ui/plugins/filesystem/plugin"
 require "./crystal_ui/plugins/dialogs/plugin"
 require "./crystal_ui/plugins/lifecycle/plugin"
 require "./crystal_ui/plugins/permissions/plugin"
-require "./crystal_ui/plugins/deep_links/plugin"
-require "./crystal_ui/plugins/secure_storage/plugin"
+# Unix-only plugins: deep_links binds unix sockets, secure_storage links
+# OpenSSL. Gated so Windows builds (adapter stubs) stay dependency-free.
+{% if flag?(:unix) %}
+  require "./crystal_ui/plugins/deep_links/plugin"
+  require "./crystal_ui/plugins/secure_storage/plugin"
+{% end %}
 require "./crystal_ui/tray_item"
 require "./crystal_ui/icon_source"
 require "./crystal_ui/web_view_config"

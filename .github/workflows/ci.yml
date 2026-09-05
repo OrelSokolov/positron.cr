@@ -35,7 +35,24 @@ jobs:
             libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
-            libnotify-dev
+            libnotify-dev \
+            libsqlite3-dev
+
+      # Unix-gated plugins link native libraries on macOS too:
+      # secure_storage links OpenSSL (brew's keg-only openssl@3 needs an
+      # explicit PKG_CONFIG_PATH), the SQLite spec links the system
+      # libsqlite3. GTK/WebKitGTK are NOT needed: macOS builds against
+      # the adapter stubs until M5 lands.
+      - name: Install native dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install openssl@3
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+
+      # Windows builds against the adapter stubs only: unix-only plugins
+      # (deep_links, secure_storage) and the SQLite spec are flag-gated
+      # out, so no native dependencies are required. WebView2 / OpenSSL
+      # dependencies get added here together with the M5 adapters.
 
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1
@@ -64,4 +81,14 @@ jobs:
             fi
             echo "::endgroup::"
           done
+
+          # The CLI links no GUI stack — must build on every runner.
+          echo "::group::Build crystal-ui CLI"
+          if crystal build src/crystal_ui/cli.cr -o bin/crystal-ui --no-color; then
+            echo "crystal-ui: OK"
+          else
+            echo "crystal-ui: FAILED"
+            status=1
+          fi
+          echo "::endgroup::"
           exit $status

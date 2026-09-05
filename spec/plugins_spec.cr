@@ -97,7 +97,8 @@ describe CrystalUI::Plugins::SecureStorageCrypto do
   end
 end
 
-describe CrystalUI::Plugins::SecureStorage do
+{% if flag?(:unix) %}
+  describe CrystalUI::Plugins::SecureStorage do
   it "stores and retrieves secrets across plugin instances" do
     data_home = temp_dir()
     old_data = ENV["XDG_DATA_HOME"]?
@@ -136,6 +137,7 @@ describe CrystalUI::Plugins::SecureStorage do
     FileUtils.rm_rf(data_home)
   end
 end
+{% end %}
 
 {% if flag?(:unix) %}
   describe CrystalUI::Plugins::DeepLinks do
