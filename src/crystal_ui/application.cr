@@ -131,7 +131,7 @@ module CrystalUI
     #
     #   ICON_SVG = embed_file("assets/icon.svg")
     macro embed_file(path)
-      {{ run(__DIR__ + "/embed_file.cr", path) }}
+      {{ run("./embed_file.cr", path) }}
     end
 
     # Embed a whole directory tree at compile time (Base64-encoded, safe for
@@ -150,7 +150,7 @@ module CrystalUI
     # `embed_directory("frontend")`.
     macro embed_directory(dir)
       def embedded_directory : Hash(String, String)
-        @@embedded_directory ||= {{ run(__DIR__ + "/embed_directory.cr", dir) }}
+        @@embedded_directory ||= {{ run("./embed_directory.cr", dir) }}
       end
 
       @embedded_file_cache = {} of String => Bytes
@@ -204,14 +204,14 @@ module CrystalUI
 
       # Resolve the actual icon file at compile time, falling back through
       # common formats if the platform-preferred file is missing.
-      {% resolved = run(__DIR__ + "/resolve_icon_path.cr", dir + "/" + icon_base, preferred_ext, ".svg", ".png", ".ico") %}
+      {% resolved = run("./resolve_icon_path.cr", dir + "/" + icon_base, preferred_ext, ".svg", ".png", ".ico") %}
       {% resolved_lines = resolved.split("\n") %}
       {% icon_file = resolved_lines[0] %}
       {% icon_ext = resolved_lines[1] %}
       {% icon_fmt = (icon_ext == ".svg") ? :svg : (icon_ext == ".png") ? :png : :ico %}
 
       private def embedded_icon : String
-        {{ run(__DIR__ + "/embed_file.cr", icon_file) }}
+        {{ run("./embed_file.cr", icon_file) }}
       end
 
       private def embedded_icon_html : String
@@ -228,9 +228,9 @@ module CrystalUI
       end
 
       private def application_html : String
-        html = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.html") }}
-        css = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.css") }}
-        js = {{ run(__DIR__ + "/embed_file.cr", dir + "/frontend/application.js") }}
+        html = {{ run("./embed_file.cr", dir + "/frontend/application.html") }}
+        css = {{ run("./embed_file.cr", dir + "/frontend/application.css") }}
+        js = {{ run("./embed_file.cr", dir + "/frontend/application.js") }}
         build_application_html(html, css, js, embedded_icon_html)
       end
 
