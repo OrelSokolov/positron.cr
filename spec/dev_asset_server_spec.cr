@@ -112,10 +112,13 @@ ensure
   FileUtils.rm_rf(dir) if dir
 end
 
+# Poll + sleep loop with a bounded number of iterations. Deliberately avoids
+# Time.monotonic (deprecated in newer Crystal in favour of Time.instant,
+# which older compilers supported by this repo do not have yet).
 def wait_until(timeout : Time::Span, &condition : -> Bool)
-  deadline = Time.monotonic + timeout
+  remaining = {(timeout.total_milliseconds / 50).ceil.to_i, 1}.max
   until condition.call
-    raise "condition not met within #{timeout}" if Time.monotonic > deadline
+    raise "condition not met within #{timeout}" if (remaining -= 1) < 0
     sleep 50.milliseconds
   end
 end

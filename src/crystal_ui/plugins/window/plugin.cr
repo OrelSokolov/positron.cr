@@ -91,7 +91,11 @@ module CrystalUI::Plugins
 
     # Blocks return JSON::Any directly (never nil) so the command block's
     # Proc type is fully explicit — newer Crystal compilers reject
-    # uninferred block return types here.
+    # uninferred block return types here. Blocks whose return value is
+    # derived from a WebViewPort call additionally need a trailing
+    # `.as(JSON::Any)`: without it Crystal >= 1.21 crashes in codegen
+    # ("Cast from Nil to ProcInstanceType failed", cf. crystal-lang/crystal
+    # #11653) when the captured block is called from the register block.
     def bind(registry : CrystalUI::CommandRegistry, state : CrystalUI::StateManager)
       register registry, "window.set_title" do |webview, args|
         webview.set_title(arg_string(args, "title"))
@@ -129,7 +133,7 @@ module CrystalUI::Plugins
       end
 
       register registry, "window.is_maximized" do |webview, _args|
-        json(webview.maximized?)
+        json(webview.maximized?).as(JSON::Any)
       end
 
       register registry, "window.fullscreen" do |webview, _args|
@@ -159,12 +163,12 @@ module CrystalUI::Plugins
 
       register registry, "window.get_size" do |webview, _args|
         width, height = webview.size
-        json({width: width, height: height})
+        json({width: width, height: height}).as(JSON::Any)
       end
 
       register registry, "window.get_position" do |webview, _args|
         x, y = webview.position
-        json({x: x, y: y})
+        json({x: x, y: y}).as(JSON::Any)
       end
 
       register registry, "window.open_devtools" do |webview, _args|

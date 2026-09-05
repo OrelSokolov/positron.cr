@@ -63,39 +63,43 @@ describe CrystalUI::Plugins::Filesystem do
   end
 end
 
-describe CrystalUI::Plugins::SecureStorageCrypto do
-  it "computes HMAC-SHA256 correctly (RFC 4231 test case 2)" do
-    key = Bytes.new(20, 0x0b)
-    message = "Hi There".to_slice
+# SecureStorageCrypto lives in the unix-only secure_storage plugin (it links
+# OpenSSL), so these specs are flag-gated like the SecureStorage ones below.
+{% if flag?(:unix) %}
+  describe CrystalUI::Plugins::SecureStorageCrypto do
+    it "computes HMAC-SHA256 correctly (RFC 4231 test case 2)" do
+      key = Bytes.new(20, 0x0b)
+      message = "Hi There".to_slice
 
-    digest = CrystalUI::Plugins::SecureStorageCrypto.hmac_sha256(key, message)
-    digest.hexstring.should eq(
-      "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7")
+      digest = CrystalUI::Plugins::SecureStorageCrypto.hmac_sha256(key, message)
+      digest.hexstring.should eq(
+        "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7")
+    end
+
+    it "derives deterministic keys that differ per salt" do
+      crypto = CrystalUI::Plugins::SecureStorageCrypto
+
+      a1 = crypto.pbkdf2_sha256("password".to_slice, "saltA".to_slice, 100, 32)
+      a2 = crypto.pbkdf2_sha256("password".to_slice, "saltA".to_slice, 100, 32)
+      b = crypto.pbkdf2_sha256("password".to_slice, "saltB".to_slice, 100, 32)
+
+      a1.should eq(a2)
+      a1.should_not eq(b)
+      a1.size.should eq(32)
+    end
+
+    it "encrypts and decrypts round-trip" do
+      crypto = CrystalUI::Plugins::SecureStorageCrypto
+      key = crypto.pbkdf2_sha256("k".to_slice, "s".to_slice, 10, 32)
+
+      iv, ciphertext = crypto.encrypt(key, "secret payload".to_slice)
+      (String.new(ciphertext).includes?("secret payload")).should be_false
+
+      plain = crypto.decrypt(key, iv, ciphertext)
+      String.new(plain).should eq("secret payload")
+    end
   end
-
-  it "derives deterministic keys that differ per salt" do
-    crypto = CrystalUI::Plugins::SecureStorageCrypto
-
-    a1 = crypto.pbkdf2_sha256("password".to_slice, "saltA".to_slice, 100, 32)
-    a2 = crypto.pbkdf2_sha256("password".to_slice, "saltA".to_slice, 100, 32)
-    b = crypto.pbkdf2_sha256("password".to_slice, "saltB".to_slice, 100, 32)
-
-    a1.should eq(a2)
-    a1.should_not eq(b)
-    a1.size.should eq(32)
-  end
-
-  it "encrypts and decrypts round-trip" do
-    crypto = CrystalUI::Plugins::SecureStorageCrypto
-    key = crypto.pbkdf2_sha256("k".to_slice, "s".to_slice, 10, 32)
-
-    iv, ciphertext = crypto.encrypt(key, "secret payload".to_slice)
-    (String.new(ciphertext).includes?("secret payload")).should be_false
-
-    plain = crypto.decrypt(key, iv, ciphertext)
-    String.new(plain).should eq("secret payload")
-  end
-end
+{% end %}
 
 {% if flag?(:unix) %}
   describe CrystalUI::Plugins::SecureStorage do
