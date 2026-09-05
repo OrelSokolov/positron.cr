@@ -39,6 +39,7 @@ src/crystal_ui/
   host.cr               # abstract host (shared dispatch/bind logic)
   desktop_host.cr       # Linux desktop wiring (WebView + tray + loop)
   application.cr        # base class for user apps
+  embed_directory.cr    # compile-time helper for Application#embed_directory
   js_facade_generator.cr # generates CrystalUI.* JS runtime
   event_loop/linux.cr   # GTK main loop + Crystal fiber integration
   adapters/linux/       # WebKitGTK, AppIndicator, icon
@@ -61,6 +62,15 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   Responses go back via `window.__crystalResolve(id, success, data, error)`.
 - Examples use `embed_application_files(__DIR__, icon_path)` to bake
   HTML/CSS/JS and the icon into the binary at compile time.
+- `Application#embed_directory(dir)` bakes a whole tree (base64, binary-safe)
+  — e.g. a built web app; `Application#embed_file(path)` bakes one file.
+  Both take plain string literals (relative paths resolve from the
+  compiler's working directory).
+- `WebViewPort#register_uri_scheme(scheme) { |path| SchemeResponse? }` serves
+  embedded trees from the host process (WebKitGTK: register_uri_scheme) —
+  no local HTTP server needed. Call it before `create`.
+- `WebViewConfig#close_to_tray` (default true): false makes the window close
+  button quit the event loop instead of hiding to the tray.
 
 ## Known gaps (by design, not bugs)
 

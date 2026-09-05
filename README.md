@@ -250,6 +250,35 @@ CrystalUI.call("greet", { name: "Crystal" }).then(result => {
 The Host dispatches the call in Crystal and resolves the promise with
 `window.__crystalResolve(id, success, data, error)`.
 
+## Embedding assets & custom URI schemes
+
+`Application#embed_directory("frontend")` bakes a whole directory tree into
+the binary at compile time (Base64-encoded, binary-safe) — intended for
+built web apps with hashed asset names. `Application#embed_file("assets/icon.svg")`
+bakes a single file as a String. Both arguments must be plain string
+literals; relative paths resolve against the compiler's working directory.
+
+Serve the embedded tree to the WebView without any HTTP server:
+
+```crystal
+class MyApp < CrystalUI::Application
+  embed_directory("frontend")
+
+  def on_ready
+    webview.register_uri_scheme("app") do |path|
+      if bytes = embedded_file?(path)
+        CrystalUI::SchemeResponse.new(bytes, "text/html; charset=utf-8")
+      end
+    end
+    webview.create(CrystalUI::WebViewConfig.new(title: "MyApp", close_to_tray: false))
+    webview.load_url("app://myapp/")
+  end
+end
+```
+
+`WebViewConfig#close_to_tray = false` makes the window close button quit the
+event loop instead of hiding the window for a tray "Open" action.
+
 ## License
 
 MIT

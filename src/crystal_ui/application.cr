@@ -124,6 +124,52 @@ module CrystalUI
     # loading: the desktop binary is self-contained.
     abstract def application_html : String
 
+    # Embed a single file at compile time as a String literal. `path` must be
+    # a plain string literal (relative paths resolve against the compiler's
+    # working directory). Expands to the file contents, so it can be used in
+    # constants:
+    #
+    #   ICON_SVG = embed_file("assets/icon.svg")
+    macro embed_file(path)
+      {{ run(__DIR__ + "/embed_file.cr", path) }}
+    end
+
+    # Embed a whole directory tree at compile time (Base64-encoded, safe for
+    # binary files) — e.g. a built web app with hashed asset names. Exposes:
+    #
+    #   embedded_directory     : Hash(String, String)  # "/path" => Base64
+    #   embedded_file?(path)   : Bytes?                # decoded, cached
+    #   embedded_file(path)    : Bytes                 # raises when missing
+    #
+    # Paths are "/"-rooted relative to the embedded directory. Pair with
+    # `webview.register_uri_scheme` to serve them from the host process.
+    #
+    # NOTE: `dir` must be a plain string literal (run() passes macro-variable
+    # expressions through unevaluated). Relative paths resolve against the
+    # directory the compiler runs from — typically the shard root, e.g.
+    # `embed_directory("frontend")`.
+    macro embed_directory(dir)
+      def embedded_directory : Hash(String, String)
+        @@embedded_directory ||= {{ run(__DIR__ + "/embed_directory.cr", dir) }}
+      end
+
+      @embedded_file_cache = {} of String => Bytes
+
+      def embedded_file?(path : String) : Bytes?
+        if bytes = @embedded_file_cache[path]?
+          bytes
+        elsif b64 = embedded_directory[path]?
+          bytes = Base64.decode(b64)
+          @embedded_file_cache[path] = bytes
+          bytes
+        end
+      end
+
+      def embedded_file(path : String) : Bytes
+        embedded_file?(path) || raise "no embedded file: #{path}"
+      end
+    end
+
     # Embed frontend assets into the compiled binary at compile time.
     #
     # This macro also embeds the application icon and exposes:

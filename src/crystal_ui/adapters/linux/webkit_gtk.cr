@@ -18,11 +18,17 @@ module CrystalUI
         @callback : Proc(String, String)?
         @message_handler : Proc(Void*, Void*, Void*, Nil)?
         @delete_handler : Proc(Void*, Void*, Void*, Int32)?
+        @close_to_tray : Bool = true
+        @scheme_handlers : Hash(String, Proc(String, CrystalUI::SchemeResponse?))
+        @scheme_callbacks : Array(Proc(Void*, Void*, Nil))
+        @empty_byte : UInt8 = 0
 
         def initialize
           @window = Pointer(Void).null
           @web_view = Pointer(Void).null
           @user_content_manager = Pointer(Void).null
+          @scheme_handlers = {} of String => Proc(String, CrystalUI::SchemeResponse?)
+          @scheme_callbacks = [] of Proc(Void*, Void*, Nil)
         end
 
         def create(config : WebViewConfig)
@@ -41,10 +47,16 @@ module CrystalUI
           end
 
           # Intercept the window close button: hide instead of destroy so the
-          # tray "Open" action can bring the window back.
+          # tray "Open" action can bring the window back — unless the app
+          # opted out with WebViewConfig#close_to_tray=false (no tray).
+          @close_to_tray = config.close_to_tray
           @delete_handler = ->(widget : Void*, event : Void*, data : Void*) do
             webkit = Box(WebKitGTK).unbox(data)
-            webkit.hide
+            if webkit.close_to_tray?
+              webkit.hide
+            else
+              webkit.quit_event_loop
+            end
             1 # TRUE: stop the default destroy behavior
           end
 
@@ -82,6 +94,58 @@ module CrystalUI
 
         def hide
           LibGTK.gtk_widget_hide(@window)
+        end
+
+        # Serve a custom URI scheme (`app://…`) straight from the host process
+        # via WebKit's register_uri_scheme — embedded assets need no HTTP
+        # server. Must be called before `create` (WebKit freezes the scheme
+        # list when the WebView spawns its web process).
+        def register_uri_scheme(scheme : String, &handler : String -> CrystalUI::SchemeResponse?)
+          @scheme_handlers[scheme] = handler
+
+          callback = ->(request : Void*, user_data : Void*) {
+            webkit = Box(WebKitGTK).unbox(user_data)
+            webkit.handle_scheme_request(request)
+          }
+          @scheme_callbacks << callback # keep the proc alive for C
+
+          context = LibWebKit.webkit_web_context_get_default
+          LibWebKit.webkit_web_context_register_uri_scheme(
+            context,
+            scheme,
+            callback.pointer.as(Void*),
+            Box.box(self),
+            Pointer(Void).null
+          )
+        end
+
+        protected def handle_scheme_request(request : Void*)
+          uri = String.new(LibWebKit.webkit_uri_scheme_request_get_uri(request))
+          scheme = uri.split(":", 2)[0]?
+          path = String.new(LibWebKit.webkit_uri_scheme_request_get_path(request))
+
+          response = scheme ? @scheme_handlers[scheme]?.try(&.call(path)) : nil
+          if response
+            bytes = response.bytes
+            stream = LibGIO.g_memory_input_stream_new_from_data(
+              bytes.to_unsafe, bytes.size.to_i64, Pointer(Void).null)
+            LibWebKit.webkit_uri_scheme_request_finish(
+              request, stream, bytes.size.to_i64, response.mime_type)
+          else
+            # No handler / not found: empty body beats crashing the request.
+            stream = LibGIO.g_memory_input_stream_new_from_data(
+              pointerof(@empty_byte), 0_i64, Pointer(Void).null)
+            LibWebKit.webkit_uri_scheme_request_finish(
+              request, stream, 0_i64, "text/plain; charset=utf-8")
+          end
+        end
+
+        protected def close_to_tray? : Bool
+          @close_to_tray
+        end
+
+        protected def quit_event_loop
+          LibGTK.gtk_main_quit
         end
 
         def bind(name : String, &block : String -> String)
@@ -210,6 +274,16 @@ module CrystalUI
           fun webkit_user_content_manager_add_script(manager : Void*, script : Void*)
           fun webkit_user_script_new(source : LibC::Char*, injected_frames : UInt32, injection_time : UInt32, allow_list : Void*, block_list : Void*) : Void*
           fun webkit_javascript_result_get_js_value(js_result : Void*) : Void*
+          fun webkit_web_context_get_default : Void*
+          fun webkit_web_context_register_uri_scheme(context : Void*, scheme : LibC::Char*, callback : Void*, user_data : Void*, destroy_notify : Void*)
+          fun webkit_uri_scheme_request_get_uri(request : Void*) : LibC::Char*
+          fun webkit_uri_scheme_request_get_path(request : Void*) : LibC::Char*
+          fun webkit_uri_scheme_request_finish(request : Void*, stream : Void*, stream_length : Int64, content_type : LibC::Char*)
+        end
+
+        @[Link("gio-2.0")]
+        lib LibGIO
+          fun g_memory_input_stream_new_from_data(data : UInt8*, length : Int64, destroy : Void*) : Void*
         end
 
         @[Link("javascriptcoregtk-4.1")]
