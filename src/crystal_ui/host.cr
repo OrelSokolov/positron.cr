@@ -73,6 +73,16 @@ module CrystalUI
       eval_js(facade.hydrate_js(@state_manager.snapshot))
     end
 
+    # Push an event to the frontend. Subscribers registered with
+    # `CrystalUI.on(name, callback)` in JS receive the payload.
+    #
+    # This is the single supported way to notify the UI from Crystal:
+    # plugins must not hand-roll `eval_js` strings. The call is marshalled
+    # to the GUI thread so it is safe to call from any fiber.
+    def emit_to_js(event : String, payload) : Nil
+      run_on_main { eval_js("window.__crystalNotify(#{event.to_json}, #{payload.to_json})") }
+    end
+
     protected def bind_plugins
       @plugins.each do |plugin|
         plugin.host = self
@@ -100,6 +110,16 @@ module CrystalUI
         key = payload["key"].as_s
         value = payload["value"]
         eval_js(js_facade.patch_js(plugin, key, value))
+      end
+
+      # Window state changes and dropped files are broadcast to the
+      # frontend so JS can subscribe with
+      # CrystalUI.on("window.resized", ...) / CrystalUI.on("dnd.files", ...).
+      {"window.resized", "window.moved", "window.maximized", "window.unmaximized",
+       "window.fullscreened", "window.unfullscreened", "dnd.files"}.each do |event|
+        EventBus.on(event) do |payload|
+          emit_to_js(event, payload)
+        end
       end
     end
 

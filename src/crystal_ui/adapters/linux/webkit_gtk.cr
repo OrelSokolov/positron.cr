@@ -1,5 +1,6 @@
 require "json"
 require "log"
+require "uri"
 
 module CrystalUI
   module Adapters
@@ -18,7 +19,12 @@ module CrystalUI
         @callback : Proc(String, String)?
         @message_handler : Proc(Void*, Void*, Void*, Nil)?
         @delete_handler : Proc(Void*, Void*, Void*, Int32)?
+        @configure_handler : Proc(Void*, Void*, Void*, Int32)?
+        @drag_handler : Proc(Void*, Void*, Int32, Int32, Void*, UInt32, UInt32, Void*, Nil)?
         @close_to_tray : Bool = true
+        @last_size : {Int32, Int32} = {-1, -1}
+        @last_position : {Int32, Int32} = {-1, -1}
+        @last_maximized : Bool = false
         @scheme_handlers : Hash(String, Proc(String, CrystalUI::SchemeResponse?))
         @scheme_callbacks : Array(Proc(Void*, Void*, Nil))
         @empty_byte : UInt8 = 0
@@ -68,6 +74,9 @@ module CrystalUI
             nil,
             0
           )
+
+          connect_window_signals
+          enable_file_drag_and_drop
 
           @web_view = LibWebKit.webkit_web_view_new
           @user_content_manager = LibWebKit.webkit_web_view_get_user_content_manager(@web_view)
@@ -194,8 +203,219 @@ module CrystalUI
           LibGTK.gtk_main_quit
         end
 
-        private def inject_bridge_shim(handler_name : String)
-          shim = <<-JS
+        # --- Window management (WebViewPort) ---
+
+        def set_title(title : String) : Nil
+          LibGTK.gtk_window_set_title(@window, title)
+        end
+
+        def resize(width : Int32, height : Int32) : Nil
+          LibGTK.gtk_window_resize(@window, width, height)
+        end
+
+        def center : Nil
+          LibGTK.gtk_window_set_position(@window, LibGTK::GTK_WIN_POS_CENTER)
+        end
+
+        def set_minimum_size(width : Int32, height : Int32) : Nil
+          apply_geometry_hints(min: {width, height})
+        end
+
+        def set_maximum_size(width : Int32, height : Int32) : Nil
+          apply_geometry_hints(max: {width, height})
+        end
+
+        def maximize : Nil
+          LibGTK.gtk_window_maximize(@window)
+        end
+
+        def unmaximize : Nil
+          LibGTK.gtk_window_unmaximize(@window)
+        end
+
+        def maximized? : Bool
+          LibGTK.gtk_window_is_maximized(@window) == 1
+        end
+
+        def fullscreen : Nil
+          LibGTK.gtk_window_fullscreen(@window)
+          CrystalUI::EventBus.emit("window.fullscreened", JSON.parse(%({})))
+        end
+
+        def unfullscreen : Nil
+          LibGTK.gtk_window_unfullscreen(@window)
+          CrystalUI::EventBus.emit("window.unfullscreened", JSON.parse(%({})))
+        end
+
+        def set_always_on_top(enabled : Bool) : Nil
+          LibGTK.gtk_window_set_keep_above(@window, enabled ? 1 : 0)
+        end
+
+        def set_decorated(decorated : Bool) : Nil
+          LibGTK.gtk_window_set_decorated(@window, decorated ? 1 : 0)
+        end
+
+        def focus : Nil
+          LibGTK.gtk_window_present(@window)
+        end
+
+        def size : {Int32, Int32}
+          width = 0
+          height = 0
+          LibGTK.gtk_window_get_size(@window, pointerof(width), pointerof(height))
+          {width, height}
+        end
+
+        def position : {Int32, Int32}
+          x = 0
+          y = 0
+          LibGTK.gtk_window_get_position(@window, pointerof(x), pointerof(y))
+          {x, y}
+        end
+
+        # --- Developer tools (WebKitGTK Web Inspector) ---
+
+        def open_devtools : Nil
+          LibWebKit.webkit_web_inspector_show(inspector)
+        end
+
+        def close_devtools : Nil
+          LibWebKit.webkit_web_inspector_close(inspector)
+        end
+
+        def devtools_open? : Bool
+          !LibWebKit.webkit_web_inspector_get_web_view(inspector).null?
+        end
+
+        private def inspector : Void*
+          LibWebKit.webkit_web_view_get_inspector(@web_view)
+        end
+
+        # Set min/max size constraints via GdkGeometry hints. Only the
+        # requested hint is applied; the other bound stays unlimited.
+        private def apply_geometry_hints(min : {Int32, Int32}? = nil, max : {Int32, Int32}? = nil)
+          # GdkGeometry starts with min_width, min_height, max_width, max_height.
+          geometry = Pointer(Int32).malloc(16)
+          4.times { |i| geometry[i] = 0 }
+
+          mask = 0_u32
+          if min
+            geometry[0], geometry[1] = min[0], min[1]
+            mask |= LibGTK::GDK_HINT_MIN_SIZE
+          end
+          if max
+            geometry[2], geometry[3] = max[0], max[1]
+            mask |= LibGTK::GDK_HINT_MAX_SIZE
+          end
+
+          LibGTK.gtk_window_set_geometry_hints(
+            @window, Pointer(Void).null, geometry.as(Void*), mask)
+        end
+
+        # Wire the GTK "configure-event" signal; on each event, diff the
+        # cached size/position/maximized state and broadcast changes.
+        private def connect_window_signals
+          @last_size = {-1, -1}
+          @last_position = {-1, -1}
+
+          @configure_handler = ->(widget : Void*, event : Void*, data : Void*) do
+            webkit = Box(WebKitGTK).unbox(data)
+            webkit.emit_window_state_changes
+            0 # FALSE: let GTK process the event normally
+          end
+
+          LibGObject.g_signal_connect_data(
+            @window,
+            "configure-event",
+            @configure_handler.not_nil!.pointer.as(Void*),
+            Box.box(self),
+            nil,
+            0
+          )
+        end
+
+        protected def emit_window_state_changes
+          width, height = size
+          if @last_size != {width, height}
+            @last_size = {width, height}
+            CrystalUI::EventBus.emit(
+              "window.resized",
+              JSON.parse(%({"width":#{width},"height":#{height}}))
+            )
+          end
+
+          x, y = position
+          if @last_position != {x, y}
+            @last_position = {x, y}
+            CrystalUI::EventBus.emit(
+              "window.moved",
+              JSON.parse(%({"x":#{x},"y":#{y}}))
+            )
+          end
+
+          maximized = maximized?
+          if @last_maximized != maximized
+            @last_maximized = maximized
+            CrystalUI::EventBus.emit(
+              maximized ? "window.maximized" : "window.unmaximized",
+              JSON.parse(%({}))
+            )
+          end
+        end
+
+        # Accept file drops on the window. Dropped files are decoded from
+        # `file://` URIs and broadcast as `dnd.files` on the EventBus
+        # (the host forwards them to the frontend).
+        GTK_DEST_DEFAULT_ALL = 7
+        GDK_ACTION_COPY      = 1
+
+        private def enable_file_drag_and_drop
+          LibGTK.gtk_drag_dest_set(
+            @window, GTK_DEST_DEFAULT_ALL,
+            Pointer(Void).null, 0, GDK_ACTION_COPY)
+          LibGTK.gtk_drag_dest_add_uri_targets(@window)
+
+          @drag_handler = ->(widget : Void*, context : Void*, x : Int32, y : Int32,
+                             data : Void*, info : UInt32, time : UInt32, user_data : Void*) do
+            webkit = Box(WebKitGTK).unbox(user_data)
+            uris_ptr = LibGTK.gtk_selection_data_get_uris(data)
+
+            paths = [] of String
+            unless uris_ptr.null?
+              cursor = uris_ptr
+              while (str_ptr = cursor.value).null? == false
+                uri = String.new(str_ptr)
+                paths << decode_file_uri(uri) if uri.starts_with?("file://")
+                cursor += 1
+              end
+              LibGLib.g_strfreev(uris_ptr)
+            end
+
+            unless paths.empty?
+              CrystalUI::EventBus.emit(
+                "dnd.files",
+                JSON.parse({files: paths}.to_json)
+              )
+            end
+            nil
+          end
+
+          LibGObject.g_signal_connect_data(
+            @window,
+            "drag-data-received",
+            @drag_handler.not_nil!.pointer.as(Void*),
+            Box.box(self),
+            nil,
+            0
+          )
+        end
+
+        # file:///path/with%20spaces → /path/with spaces
+        private def decode_file_uri(uri : String) : String
+          URI.decode(uri.lchop("file://"))
+        end
+
+        private def inject_bridge_shim(handler_name : String)          shim = <<-JS
             window.CrystalBridge = window.CrystalBridge || {
               postMessage: function(jsonString) {
                 window.webkit.messageHandlers.#{handler_name}.postMessage(JSON.parse(jsonString));
@@ -233,12 +453,33 @@ module CrystalUI
 
         @[Link("gtk-3")]
         lib LibGTK
+          GTK_WIN_POS_CENTER = 2
+
+          GDK_HINT_MIN_SIZE = 1 << 1
+          GDK_HINT_MAX_SIZE = 1 << 3
+
           fun gtk_init(argc : Int32*, argv : Void**)
           fun gtk_window_new(type : Int32) : Void*
           fun gtk_window_set_title(window : Void*, title : LibC::Char*)
           fun gtk_window_set_default_size(window : Void*, width : Int32, height : Int32)
+          fun gtk_window_resize(window : Void*, width : Int32, height : Int32)
+          fun gtk_window_get_size(window : Void*, width : Int32*, height : Int32*)
+          fun gtk_window_get_position(window : Void*, x : Int32*, y : Int32*)
+          fun gtk_window_set_position(window : Void*, position : Int32)
+          fun gtk_window_set_geometry_hints(window : Void*, geometry_widget : Void*, geometry : Void*, geom_mask : UInt32)
           fun gtk_window_set_icon_from_file(window : Void*, filename : LibC::Char*, err : Void**) : Int32
+          fun gtk_window_maximize(window : Void*)
+          fun gtk_window_unmaximize(window : Void*)
+          fun gtk_window_is_maximized(window : Void*) : Int32
+          fun gtk_window_fullscreen(window : Void*)
+          fun gtk_window_unfullscreen(window : Void*)
+          fun gtk_window_set_keep_above(window : Void*, setting : Int32)
+          fun gtk_window_set_decorated(window : Void*, setting : Int32)
+          fun gtk_window_present(window : Void*)
           fun gtk_container_add(container : Void*, widget : Void*)
+          fun gtk_drag_dest_set(widget : Void*, flags : Int32, targets : Void*, n_targets : Int32, actions : UInt32)
+          fun gtk_drag_dest_add_uri_targets(widget : Void*)
+          fun gtk_selection_data_get_uris(selection_data : Void*) : LibC::Char**
           fun gtk_widget_show_all(widget : Void*)
           fun gtk_widget_hide(widget : Void*)
           fun gtk_main
@@ -270,10 +511,14 @@ module CrystalUI
           fun webkit_web_view_load_html(web_view : Void*, html : LibC::Char*, base_uri : LibC::Char*)
           fun webkit_web_view_run_javascript(web_view : Void*, script : LibC::Char*, cancellable : Void*, callback : Void*, user_data : Void*)
           fun webkit_web_view_get_user_content_manager(web_view : Void*) : Void*
+          fun webkit_web_view_get_inspector(web_view : Void*) : Void*
           fun webkit_user_content_manager_register_script_message_handler(manager : Void*, name : LibC::Char*) : Int32
           fun webkit_user_content_manager_add_script(manager : Void*, script : Void*)
           fun webkit_user_script_new(source : LibC::Char*, injected_frames : UInt32, injection_time : UInt32, allow_list : Void*, block_list : Void*) : Void*
           fun webkit_javascript_result_get_js_value(js_result : Void*) : Void*
+          fun webkit_web_inspector_show(inspector : Void*)
+          fun webkit_web_inspector_close(inspector : Void*)
+          fun webkit_web_inspector_get_web_view(inspector : Void*) : Void*
           fun webkit_web_context_get_default : Void*
           fun webkit_web_context_register_uri_scheme(context : Void*, scheme : LibC::Char*, callback : Void*, user_data : Void*, destroy_notify : Void*)
           fun webkit_uri_scheme_request_get_uri(request : Void*) : LibC::Char*
@@ -294,6 +539,7 @@ module CrystalUI
         @[Link("glib-2.0")]
         lib LibGLib
           fun g_free(mem : Void*)
+          fun g_strfreev(str_array : LibC::Char**)
         end
       end
     end

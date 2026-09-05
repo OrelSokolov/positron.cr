@@ -54,18 +54,34 @@ module CrystalUI
     end
 
     # Macro that registers every method annotated with @[CrystalUI::Command]
-    # in the current subclass.
+    # in the current subclass. It also records command manifests (built
+    # from the method signatures) for the TypeScript bindings generator.
     macro command_registry
+      {% manifests = [] of ::String %}
       {% for method in @type.methods %}
         {% if method.annotation(CrystalUI::Command) %}
+          {% arg_list = [] of ::String %}
+          {% for arg in method.args %}
+            {% arg_list << "CrystalUI::ArgumentManifest.new(name: #{arg.name.stringify}, type: #{arg.restriction ? arg.restriction.stringify : "Any".inspect})" %}
+          {% end %}
           registry.register({{method.name.stringify}}) do |request|
             CrystalUI::CommandResult.new(
               success: true,
               data: JSON.parse(self.{{method.name}}.to_json)
             )
           end
+          @command_manifest_list[{{method.name.stringify}}] = CrystalUI::CommandManifest.new(
+            name: {{method.name.stringify}},
+            args: [{{arg_list.splat}}] of CrystalUI::ArgumentManifest,
+          )
         {% end %}
       {% end %}
+    end
+
+    # Manifests for @[Command] methods, used by the TypeScript bindings
+    # generator. Populated automatically by `command_registry`.
+    def command_manifests : Hash(String, CommandManifest)
+      @command_manifest_list
     end
 
     # Access the WebView surface.
@@ -268,6 +284,53 @@ module CrystalUI
     private def hydrate_js : String
       CrystalUI::JSFacadeGenerator.new(plugins.to_a).hydrate_js(state_manager.snapshot)
     end
+
+    # Dev-mode counterpart of `embed_directory`: serve a frontend directory
+    # from disk over a local HTTP server, with live reload.
+    #
+    # Call this inside `on_ready` and load the returned URL:
+    #
+    #   def on_ready
+    #     url = serve_directory("frontend")
+    #     webview.create(CrystalUI::WebViewConfig.new(title: "MyApp", close_to_tray: false))
+    #     webview.load_url(url)
+    #   end
+    #
+    # Served HTML pages get the CrystalUI runtime (facade + current state)
+    # injected, so they have the same `CrystalUI.*` API as embedded pages.
+    # When a file under `dir` changes, the WebView reloads — no recompile
+    # needed. Pair with `CrystalUI::Dev.enabled?` (CRYSTAL_UI_DEV=1) to
+    # switch between serving and embedded assets in one binary.
+    def serve_directory(dir : String, fallback_path : String = "/index.html") : String
+      host_ref = -> { host }
+      server = Dev::AssetServer.new(
+        File.expand_path(dir),
+        fallback_path: fallback_path,
+        runtime_provider: -> {
+          facade = CrystalUI::JSFacadeGenerator.new(plugins.to_a)
+          [facade.runtime_js, facade.hydrate_js(host_ref.call.state_manager.snapshot)]
+        },
+      ) do
+        h = host_ref.call
+        h.run_on_main { h.eval_js("location.reload()") }
+      end
+      server.start
+      @dev_asset_server = server
+
+      # Regenerate TypeScript bindings so the frontend editor picks up
+      # new plugin and app commands on every dev start.
+      begin
+        bindings = CrystalUI::BindingsGenerator.new(plugins.to_a, self).typescript
+        File.write(File.join(File.expand_path(dir), "crystal-ui.d.ts"), bindings)
+      rescue ex
+        Log.warn { "bindings generation failed: #{ex.message}" }
+      end
+
+      server.base_url
+    end
+
+    @dev_asset_server : Dev::AssetServer?
+    @command_manifest_list = {} of String => CommandManifest
 
     # Run the application.
     #

@@ -84,16 +84,16 @@ module CrystalUI::Plugins
           File.write(path, content)
           payload = {path: path, name: File.basename(path)}
 
-          host.eval_js("window.__crystalNotify('save_file_dialog.saved', #{payload.to_json})")
+          host.emit_to_js("save_file_dialog.saved", payload)
           CrystalUI::EventBus.emit("save_file_dialog.saved", payload)
         rescue ex
           payload = {error: ex.message}
 
-          host.eval_js("window.__crystalNotify('save_file_dialog.error', #{payload.to_json})")
+          host.emit_to_js("save_file_dialog.error", payload)
           CrystalUI::EventBus.emit("save_file_dialog.error", payload)
         end
       else
-        host.eval_js("window.__crystalNotify('save_file_dialog.canceled', {})")
+        host.emit_to_js("save_file_dialog.canceled", {} of String => String)
         CrystalUI::EventBus.emit("save_file_dialog.canceled", {} of String => String)
       end
     end

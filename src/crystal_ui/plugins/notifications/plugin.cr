@@ -104,10 +104,7 @@ module CrystalUI::Plugins
 
     def on_ready(host : CrystalUI::DesktopHost)
       @adapter.on_click do |id|
-        payload = {id: id}.to_json
-        host.webview.eval_js(
-          "CrystalUI.__crystalNotify('notification.clicked', #{payload})"
-        )
+        host.emit_to_js("notification.clicked", {id: id})
       end
     end
 

@@ -43,5 +43,85 @@ module CrystalUI
     def register_uri_scheme(scheme : String, &handler : String -> SchemeResponse?)
       raise "register_uri_scheme is not implemented on this platform"
     end
+
+    # --- Window management ---
+    #
+    # A WebView port on the desktop is also the window that hosts it.
+    # These capabilities are optional: platform adapters that do not
+    # support them raise at call time. Window changes are broadcast on the
+    # EventBus as `window.*` events (resized, moved, maximized,
+    # unmaximized, fullscreened, unfullscreened) and forwarded to the
+    # frontend via `Host#emit_to_js`.
+
+    def set_title(title : String) : Nil
+      raise "set_title is not implemented on this platform"
+    end
+
+    def resize(width : Int32, height : Int32) : Nil
+      raise "resize is not implemented on this platform"
+    end
+
+    def center : Nil
+      raise "center is not implemented on this platform"
+    end
+
+    def set_minimum_size(width : Int32, height : Int32) : Nil
+      raise "set_minimum_size is not implemented on this platform"
+    end
+
+    def set_maximum_size(width : Int32, height : Int32) : Nil
+      raise "set_maximum_size is not implemented on this platform"
+    end
+
+    def maximize : Nil
+      raise "maximize is not implemented on this platform"
+    end
+
+    def unmaximize : Nil
+      raise "unmaximize is not implemented on this platform"
+    end
+
+    def maximized? : Bool
+      raise "maximized? is not implemented on this platform"
+    end
+
+    def fullscreen : Nil
+      raise "fullscreen is not implemented on this platform"
+    end
+
+    def unfullscreen : Nil
+      raise "unfullscreen is not implemented on this platform"
+    end
+
+    def set_always_on_top(enabled : Bool) : Nil
+      raise "set_always_on_top is not implemented on this platform"
+    end
+
+    # enabled=false makes the window frameless (no title bar / borders).
+    def set_decorated(decorated : Bool) : Nil
+      raise "set_decorated is not implemented on this platform"
+    end
+
+    def focus : Nil
+      raise "focus is not implemented on this platform"
+    end
+
+    def size : {Int32, Int32}
+      raise "size is not implemented on this platform"
+    end
+
+    def position : {Int32, Int32}
+      raise "position is not implemented on this platform"
+    end
+
+    # --- Developer tools ---
+
+    def open_devtools : Nil
+      raise "open_devtools is not implemented on this platform"
+    end
+
+    def close_devtools : Nil
+      raise "close_devtools is not implemented on this platform"
+    end
   end
 end

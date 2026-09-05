@@ -82,16 +82,16 @@ module CrystalUI::Plugins
           content = File.read(path).scrub
           payload = {path: path, name: File.basename(path), content: content}
 
-          host.eval_js("window.__crystalNotify('file_picker.selected', #{payload.to_json})")
+          host.emit_to_js("file_picker.selected", payload)
           CrystalUI::EventBus.emit("file_picker.selected", payload)
         rescue ex
           payload = {error: ex.message}
 
-          host.eval_js("window.__crystalNotify('file_picker.error', #{payload.to_json})")
+          host.emit_to_js("file_picker.error", payload)
           CrystalUI::EventBus.emit("file_picker.error", payload)
         end
       else
-        host.eval_js("window.__crystalNotify('file_picker.canceled', {})")
+        host.emit_to_js("file_picker.canceled", {} of String => String)
         CrystalUI::EventBus.emit("file_picker.canceled", {} of String => String)
       end
     end
