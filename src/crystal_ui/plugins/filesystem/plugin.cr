@@ -169,7 +169,11 @@ module CrystalUI::Plugins
       if sandbox = @root
         root_expanded = File.expand_path(sandbox)
         expanded = File.expand_path(raw, root_expanded)
-        unless expanded == root_expanded || expanded.starts_with?(root_expanded + File::SEPARATOR)
+        # File.expand_path normalizes to the native separator ("\\" on
+        # Windows), while File::SEPARATOR is "/" everywhere — use the
+        # native one or the containment check fails on win32.
+        separator = Path::SEPARATORS[0]
+        unless expanded == root_expanded || expanded.starts_with?(root_expanded + separator)
           raise "path '#{raw}' is outside the fs plugin sandbox"
         end
         expanded

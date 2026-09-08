@@ -71,7 +71,11 @@ describe CrystalUI::Packaging do
     File.exists?(File.join(app_dir, "AppRun")).should be_true
     File.exists?(File.join(app_dir, "myapp.desktop")).should be_true
     File.exists?(File.join(app_dir, "usr", "bin")).should be_true
-    ((File.info(File.join(app_dir, "AppRun")).permissions.value & 0o111) != 0).should be_true
+    # Exec bits are POSIX-only: win32 File.info reports 0o666/0o444 for
+    # regular files regardless of chmod, so skip the assertion there.
+    {% if flag?(:unix) %}
+      ((File.info(File.join(app_dir, "AppRun")).permissions.value & 0o111) != 0).should be_true
+    {% end %}
     # Without appimagetool the scaffold itself is returned.
     result.should eq(app_dir)
 
