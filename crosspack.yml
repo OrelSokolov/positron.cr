@@ -1,0 +1,141 @@
+# crosspack — build orchestration for the CrystalUI shard.
+#
+# CrystalUI is a library, not an end product: this file carries the build
+# matrix and the dependencies only. There is deliberately no package:
+# section — `crosspack pack` is for applications built *with* CrystalUI.
+#
+#   crosspack deps              # verify/install this host's build deps
+#   crosspack build             # specs + CLI + all examples -> builds/
+#   crosspack resolve <target>  # runtime Depends line for a target
+#
+# The version follows shard.yml — bump both together.
+
+name: crystal-ui
+version: 0.1.0
+
+build:
+  output: builds
+
+  # Host-axis build dependencies: what the build machine needs (dev
+  # packages, the compiler). The top-level deps: section below is the
+  # runtime axis. Host selectors: distro id from /etc/os-release, then
+  # ID_LIKE tokens (ubuntu hits the debian rule), then os, then "*".
+  # sqlite3 (opt-in plugin) is intentionally absent — crosspack deps has
+  # no "optional" concept and the default matrix builds without it.
+  deps:
+    crystal:
+      hosts:
+        debian:
+          verify: crystal --version
+          install: curl -fsSL https://crystal-lang.org/install.sh | sudo bash
+        fedora:
+          verify: crystal --version
+          install: sudo dnf install -y crystal
+        arch:
+          verify: crystal --version
+          install: sudo pacman -S --needed crystal
+        "*":
+          verify: crystal --version
+
+    gtk3-dev:
+      hosts:
+        debian:
+          verify: pkg-config --exists gtk+-3.0
+          install: sudo apt-get install -y libgtk-3-dev
+        fedora:
+          verify: pkg-config --exists gtk+-3.0
+          install: sudo dnf install -y gtk3-devel
+        arch:
+          verify: pkg-config --exists gtk+-3.0
+          install: sudo pacman -S --needed gtk3
+        "*":
+          verify: pkg-config --exists gtk+-3.0
+
+    webkit2gtk-4.1-dev:
+      hosts:
+        debian:
+          verify: pkg-config --exists webkit2gtk-4.1
+          install: sudo apt-get install -y libwebkit2gtk-4.1-dev
+        fedora:
+          verify: pkg-config --exists webkit2gtk-4.1
+          install: sudo dnf install -y webkit2gtk4.1-devel
+        arch:
+          verify: pkg-config --exists webkit2gtk-4.1
+          install: sudo pacman -S --needed webkit2gtk-4.1
+        "*":
+          verify: pkg-config --exists webkit2gtk-4.1
+
+    ayatana-appindicator3-dev:
+      hosts:
+        debian:
+          verify: pkg-config --exists ayatana-appindicator3-0.1
+          install: sudo apt-get install -y libayatana-appindicator3-dev
+        fedora:
+          verify: pkg-config --exists ayatana-appindicator3-0.1
+          install: sudo dnf install -y libayatana-appindicator3-devel
+        arch:
+          verify: pkg-config --exists ayatana-appindicator3-0.1
+          install: sudo pacman -S --needed libayatana-appindicator
+        "*":
+          verify: pkg-config --exists ayatana-appindicator3-0.1
+
+    libnotify-dev:
+      hosts:
+        debian:
+          verify: pkg-config --exists libnotify
+          install: sudo apt-get install -y libnotify-dev
+        fedora:
+          verify: pkg-config --exists libnotify
+          install: sudo dnf install -y libnotify-devel
+        arch:
+          verify: pkg-config --exists libnotify
+          install: sudo pacman -S --needed libnotify
+        "*":
+          verify: pkg-config --exists libnotify
+
+  matrix:
+    - id: linux
+      build: linux/amd64
+      steps:
+        - crystal spec          # specs must pass — same gate as CI
+        - rake build:cli        # bin/crystal-ui
+        - rake build:examples   # examples/<name>/<name>, logs to logs/
+        - cp examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
+      artifacts:
+        from: bin
+        include: ["*"]
+        to: [debian-12, ubuntu-22.04, ubuntu-24.04, ubuntu-25.10, fedora-41, arch]
+
+# Runtime-axis dependencies: the native libraries a CrystalUI application
+# links at run time, per distro family. Linux only — the framework's
+# working platform (macos/windows adapters are stubs).
+deps:
+  version: 1
+  gtk3:
+    targets:
+      debian: { "*": [libgtk-3-0] }
+      ubuntu: { "*": [libgtk-3-0] }
+      fedora: { "*": [gtk3] }
+      arch: { "*": [gtk3] }
+  webkit2gtk:
+    targets:
+      debian:
+        "12": [libwebkit2gtk-4.1-0, libwebkit2gtk-4.0-37]  # deb alternatives
+        "13": [libwebkit2gtk-4.1-0]
+      ubuntu:
+        "22.04": [libwebkit2gtk-4.1-0, libwebkit2gtk-4.0-37]
+        "*": [libwebkit2gtk-4.1-0]
+      fedora: { "*": [webkit2gtk4.1] }
+      arch: { "*": [webkit2gtk-4.1] }
+  ayatana-appindicator:
+    targets:
+      debian: { "*": [libayatana-appindicator3-1] }
+      ubuntu: { "*": [libayatana-appindicator3-1] }
+      fedora: { "*": [libayatana-appindicator3] }
+      arch: { "*": [libayatana-appindicator] }
+  libnotify:                # not in crosspack's canonical list — resolves fine
+    targets:
+      debian: { "*": [libnotify4] }
+      ubuntu: { "*": [libnotify4] }
+      fedora: { "*": [libnotify] }
+      arch: { "*": [libnotify] }

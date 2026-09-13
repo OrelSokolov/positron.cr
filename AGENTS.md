@@ -22,6 +22,14 @@ rake build:cli
 crystal build examples/hello/hello.cr -o examples/hello/hello
 ```
 
+Build orchestration lives in `crosspack.yml` (the [crosspack](https://rubygems.org/gems/crosspack)
+gem, Ruby >= 3.2): `crosspack deps` verifies/installs the build-host
+dependencies, `crosspack build` runs specs + CLI + all examples and fans
+the binaries into `builds/<target>/`. There is intentionally **no
+`package:` section** — CrystalUI is a library, not an end product; packing
+belongs to applications. Keep the `version:` in `crosspack.yml` in sync
+with `shard.yml`.
+
 All 8 examples must build cleanly and all specs must pass before a change
 is considered done.
 

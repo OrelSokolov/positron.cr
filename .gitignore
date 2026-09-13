@@ -13,3 +13,9 @@
 
 # Build logs
 /logs/*.log
+
+# crosspack build output tree
+/builds/
+
+# Compiled binaries (crystal-ui CLI, staged example binaries)
+/bin/
