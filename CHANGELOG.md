@@ -8,6 +8,27 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Real macOS notifications adapter (first M5.3 plugin port):
+  `UNUserNotificationCenter` driven through the pure-Crystal ObjC layer —
+  permission request/check, send/clear by id, click callbacks via a
+  dynamically registered delegate (banner|list|sound while frontmost).
+  The async UN APIs take ObjC blocks, which the adapter builds by hand
+  (global block literals with an NSBlock-subclass isa and no-op dealloc);
+  completion handlers run on a background queue while the command fiber
+  polls. macOS requires the host to run from a signed app bundle
+  registered with Launch Services; a bare binary (dev mode) instead
+  falls back to `osascript display notification` — banners work with no
+  bundle or signature, permission checks report granted (no click
+  callbacks or clear on that path). Verified end-to-end on arm64:
+  bare dev binary → osascript banner; signed .app → permission prompt →
+  Allow → native banner delivered.
+- macOS `.app` packaging (`positron package` + `Packaging.build_app_bundle`):
+  Info.plist rendering, bundle scaffolding and codesign (ad-hoc default,
+  `MACOS_SIGN_IDENTITY` for a real certificate, `MACOS_BUNDLE_ID` for the
+  bundle id; `--install` copies into /Applications). This is the supported
+  way to get system notifications working — signing a bare binary is not
+  enough, UNUserNotificationCenter validates the bundle identity through
+  Launch Services.
 - Windows host support in `crosspack`: a `windows` matrix entry (specs +
   CLI + all examples against the native adapters) and Windows host rules
   for the GTK build deps (the GUI stack is not linked on Windows).

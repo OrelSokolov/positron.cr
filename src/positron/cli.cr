@@ -48,8 +48,10 @@ module Positron::CLI
         build           Release build (embedded frontend assets)
         doctor          Check toolchain and native dependencies
         package [--install]
-                        Generate .desktop entry, hicolor icons and
-                        AppDir/AppImage into dist/
+                        macOS: codesigned .app bundle into dist/
+                          (MACOS_SIGN_IDENTITY, MACOS_BUNDLE_ID env)
+                        Linux: .desktop entry, hicolor icons and
+                          AppDir/AppImage into dist/
         help | version
 
       Environment:
@@ -422,6 +424,43 @@ module Positron::CLI
     build
     binary = File.expand_path(File.join("bin", name))
 
+    {% if flag?(:darwin) %}
+      package_macos(name, binary, args)
+    {% else %}
+      package_desktop_linux(name, binary, args)
+    {% end %}
+  end
+
+  # macOS packaging: a codesigned .app bundle into dist/. The bundle
+  # identity (Info.plist CFBundleIdentifier + signature) is what system
+  # services validate — see Packaging.build_app_bundle. `--install`
+  # copies the bundle into /Applications so Launch Services (and the
+  # notification permission prompt) can see it.
+  def self.package_macos(name : String, binary : String, args : Array(String)) : Nil
+    bundle_id = ENV["MACOS_BUNDLE_ID"]? || "dev.positron.#{name}"
+    icon = Dir["assets/*.png"].first? || Dir["assets/*.icns"].first?
+    puts "→ no PNG/ICNS icon in assets/, bundling without one" unless icon
+
+    app_bundle = Positron::Packaging.build_app_bundle(name, binary, bundle_id,
+      icon_path: icon, output_dir: "dist")
+    identity = ENV["MACOS_SIGN_IDENTITY"]? || "-"
+    puts "→ app bundle: #{app_bundle} (signed with: #{identity})"
+    puts "  hint: MACOS_SIGN_IDENTITY='<certificate name>' signs with your cert," \
+         " MACOS_BUNDLE_ID overrides the bundle id"
+
+    if args.includes?("--install")
+      target = File.join("/Applications", "#{name}.app")
+      FileUtils.rm_rf(target)
+      FileUtils.cp_r(app_bundle, target)
+      puts "→ installed: #{target}"
+    else
+      puts "  use --install to copy into /Applications — notification permission" \
+           " prompts only appear for Launch Services-visible apps"
+    end
+  end
+
+  def self.package_desktop_linux(name : String, binary : String,
+                                 args : Array(String)) : Nil
     icon = Dir["assets/*.svg"].first? || Dir["assets/*.png"].first?
     icon_path = nil
     if icon

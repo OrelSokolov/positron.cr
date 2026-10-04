@@ -29,7 +29,8 @@ end
   beyond the OS WebView.
 - **Cross-platform by design:** all platform code sits behind ports and
   adapters. **Linux (WebKitGTK), macOS (WKWebView) and Windows (WebView2)
-  are fully working today** — only the macOS plugin adapters are stubs;
+  are fully working today** — of the macOS plugin adapters only
+  notifications is ported, the rest are stubs;
   see the checklist below and `ROADMAP.md`.
 
 This repository contains the reference implementation of the
@@ -66,18 +67,24 @@ What is already there ✔ and what is still needed ☐:
       adapters and the POSIX-neutral plugins (fs dirs, deep_links over
       AF_UNIX, secure_storage, SQLite via the system winsqlite3) — see
       `CHANGELOG.md` for details
-- [ ] macOS plugin adapter ports (clipboard, dialogs, …) — M5.3
-- [ ] macOS (.app/dmg) packaging templates
+- [~] macOS plugin adapter ports (notifications done; clipboard, dialogs,
+      … still stubs) — M5.3
+- [ ] macOS dmg packaging templates (.app bundling + codesign is done)
 - [ ] Documentation site / `docs/` tree, shard publishing, tagged releases
 
-### Plugins (Linux + Windows; macOS adapters still stubs — port with M5.3)
+### Plugins (Linux + Windows; macOS adapters still stubs except notifications)
 
 - [x] Clipboard (text / image / files)
 - [x] Window control from JS
 - [x] Filesystem (XDG dirs, read/write/list, optional sandbox)
 - [x] Dialogs (native alert / confirm / prompt)
 - [x] File picker + save file dialog
-- [x] Notifications (libnotify, click callbacks)
+- [x] Notifications (libnotify / UNUserNotificationCenter, click callbacks).
+      On macOS, a bare dev binary automatically falls back to
+      `osascript display notification` (no bundle needed, no click
+      callbacks); from a signed `.app` bundle the native
+      UNUserNotificationCenter path is used — `positron package
+      --install`
 - [x] App lifecycle (`lifecycle.*` events)
 - [x] Deep links (single instance + URL forwarding)
 - [x] Permissions manager (desktop trust model, mobile-ready shape)
@@ -89,7 +96,8 @@ What is already there ✔ and what is still needed ☐:
 - [ ] Share sheet, badges, taskbar progress, global hotkeys, system sounds
 - [ ] Media & hardware plugins (camera, microphone, audio/video player,
       geolocation, sensors, biometrics) — Tier 2+ in `plugins.txt`
-- [ ] Plugin ports to macOS (adapter-by-adapter with M5.3)
+- [ ] Plugin ports to macOS (adapter-by-adapter with M5.3; notifications
+      done)
 
 ### Mobile (non-goal for now)
 
@@ -99,7 +107,7 @@ What is already there ✔ and what is still needed ☐:
 ## Platform support matrix
 
 Current status per platform: **Linux, macOS and Windows are working**;
-on macOS only the plugin adapters (clipboard, dialogs, …) are stubs —
+on macOS the plugin adapters are stubs except notifications (ported) —
 they port with M5.3 in `ROADMAP.md`. Legend: ✅ works · 🔶 stub
 (compiles, no implementation) · ❌ not implemented (planned).
 
@@ -116,9 +124,9 @@ they port with M5.3 in `ROADMAP.md`. Legend: ✅ works · 🔶 stub
 | Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ✅ | ✅ |
 | Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) |
 | Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ |
-| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ❌ (port with M5.3) | ✅ |
-| Packaging | ✅ .desktop / AppImage / deb | ❌ .app/dmg after M5 | ✅ MSI via `crosspack pack` |
-| `positron package` | ✅ | ❌ | ❌ (use `crosspack pack`) |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | 🔶 (notifications ✅; rest with M5.3) | ✅ |
+| Packaging | ✅ .desktop / AppImage / deb | ✅ .app + codesign (dmg pending) | ✅ MSI via `crosspack pack` |
+| `positron package` | ✅ | ✅ (`.app`; `MACOS_SIGN_IDENTITY`, `MACOS_BUNDLE_ID`) | ❌ (use `crosspack pack`) |
 
 ## Philosophy
 
@@ -146,7 +154,7 @@ they port with M5.3 in `ROADMAP.md`. Legend: ✅ works · 🔶 stub
 | Dev Asset Server | `src/positron/dev/asset_server.cr` | Serve frontend from disk + live reload |
 | TS Bindings | `src/positron/bindings_generator.cr` | Typed `positron.d.ts` from manifests |
 | CLI | `src/positron/cli.cr` | `positron init/dev/build/doctor/package` |
-| Packaging | `src/positron/packaging.cr` | `.desktop`, hicolor icons, AppDir/AppImage, deb |
+| Packaging | `src/positron/packaging.cr` | `.desktop`, hicolor icons, AppDir/AppImage, deb, macOS `.app` + codesign |
 | Clipboard Plugin | `src/positron/plugins/clipboard/` | Text / image / file clipboard access |
 | Window Plugin | `src/positron/plugins/window/` | Window control from JS (title, size, fullscreen…) |
 | Filesystem Plugin | `src/positron/plugins/filesystem/` | XDG dirs, read/write/list, optional sandbox |
@@ -446,7 +454,9 @@ cd my-app && shards install
 bin/positron dev                   # rebuild-if-stale + live reload
 bin/positron build                 # release binary in bin/
 bin/positron doctor                # toolchain and native deps check
-bin/positron package [--install]   # icons, .desktop entry, AppDir/AppImage
+bin/positron package [--install]   # Linux: icons, .desktop, AppDir/AppImage
+                                    # macOS: codesigned .app (ad-hoc by default;
+                                    #   MACOS_SIGN_IDENTITY / MACOS_BUNDLE_ID)
 ```
 
 ## Window management

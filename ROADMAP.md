@@ -226,7 +226,8 @@ pure adapter job.
 
 - [x] Extend CI to build real adapters on macOS/Windows runners.
 - [ ] Port the M3 window API and M4 plugins adapter-by-adapter;
-      capability gaps must raise, not no-op.
+      capability gaps must raise, not no-op. (notifications ported on
+      macOS — `UNUserNotificationCenter`; clipboard, dialogs, … pending)
 
 **Done when:** `hello`, `theme_demo` and the plugin examples run natively
 on macOS and Windows with feature parity for the M4 core plugins.
@@ -246,7 +247,11 @@ on macOS and Windows with feature parity for the M4 core plugins.
 - [x] Windows distribution via crosspack: `crosspack pack` builds a
       WiX MSI from the `windows` matrix artifacts (M6 Windows part —
       NSIS dropped in favour of the already-supported MSI).
-- [ ] macOS (.app/dmg) templates — after M5.1.
+- [x] macOS `.app` packaging: `positron package` scaffolds a codesigned
+      .app bundle (ad-hoc by default, `MACOS_SIGN_IDENTITY` for a real
+      certificate, `MACOS_BUNDLE_ID` to override the bundle id);
+      `--install` copies it into /Applications.
+- [ ] macOS dmg packaging templates — after M5.1.
 - [ ] Document code signing — manual docs only.
 
 ---

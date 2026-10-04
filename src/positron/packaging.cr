@@ -131,6 +131,91 @@ module Positron
       CONTROL
     end
 
+    # Render the Info.plist for a macOS .app bundle. `icon_name` adds a
+    # CFBundleIconFile entry pointing into Contents/Resources.
+    def self.info_plist(bundle_id : String, app_name : String,
+                        executable : String, version : String = "1.0",
+                        icon_name : String? = nil) : String
+      icon_entry = icon_name ? %(  <key>CFBundleIconFile</key>\n  <string>#{icon_name}</string>\n) : ""
+      <<-PLIST
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>CFBundleName</key>
+          <string>#{app_name}</string>
+          <key>CFBundleIdentifier</key>
+          <string>#{bundle_id}</string>
+          <key>CFBundleExecutable</key>
+          <string>#{executable}</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+          <key>CFBundleVersion</key>
+          <string>#{version}</string>
+          <key>CFBundleShortVersionString</key>
+          <string>#{version}</string>
+          <key>NSHighResolutionCapable</key>
+          <true/>
+        #{icon_entry}</dict>
+        </plist>
+      PLIST
+    end
+
+    # Scaffold a macOS .app bundle around a built binary and codesign it.
+    # Returns the .app path.
+    #
+    # The bundle is what macOS system services require — notably
+    # UNUserNotificationCenter, which validates clients through Launch
+    # Services by CFBundleIdentifier: a signed bare binary is NOT
+    # enough, the Info.plist identity is mandatory.
+    #
+    # `identity` is passed to `codesign -s`; it defaults to ad-hoc ("-")
+    # and can be overridden with the `identity` argument or the
+    # MACOS_SIGN_IDENTITY env var (e.g. "Developer ID Application: …").
+    # When codesign is unavailable (non-macOS host) the bundle is left
+    # unsigned with a warning.
+    def self.build_app_bundle(app_name : String, binary_path : String,
+                              bundle_id : String,
+                              icon_path : String? = nil,
+                              output_dir : String = "dist",
+                              identity : String? = nil,
+                              version : String = "1.0") : String
+      app_bundle = File.join(output_dir, "#{app_name}.app")
+      FileUtils.rm_rf(app_bundle)
+      macos_dir = File.join(app_bundle, "Contents", "MacOS")
+      resources_dir = File.join(app_bundle, "Contents", "Resources")
+      FileUtils.mkdir_p(macos_dir)
+      FileUtils.mkdir_p(resources_dir)
+
+      executable = File.basename(binary_path)
+      FileUtils.cp(binary_path, File.join(macos_dir, executable))
+      {% if !flag?(:win32) %}
+        File.chmod(File.join(macos_dir, executable), 0o755)
+      {% end %}
+
+      icon_name = nil
+      if icon_path && File.exists?(icon_path)
+        icon_name = File.basename(icon_path)
+        FileUtils.cp(icon_path, File.join(resources_dir, icon_name))
+      end
+
+      File.write(File.join(app_bundle, "Contents", "Info.plist"),
+        info_plist(bundle_id, app_name, executable, version, icon_name))
+
+      codesign = find_executable("codesign")
+      unless codesign
+        Log.for("positron.packaging").warn {
+          "codesign not found — #{app_bundle} left unsigned (macOS system " \
+          "services such as notifications will reject it)"
+        }
+        return app_bundle
+      end
+
+      identity = ENV["MACOS_SIGN_IDENTITY"]? || identity || "-"
+      run(codesign, ["--force", "--sign", identity, app_bundle])
+      app_bundle
+    end
+
     # --- tool discovery ---
 
     def self.find_icon_converter : String?

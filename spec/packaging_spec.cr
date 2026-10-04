@@ -91,4 +91,46 @@ describe Positron::Packaging do
     control.should contain("Depends: libgtk-3-0, libwebkit2gtk-4.1-0")
     control.should contain("Description: A Positron application")
   end
+
+  it "renders a macOS Info.plist with and without an icon" do
+    plist = Positron::Packaging.info_plist(
+      "dev.positron.myapp", "My App", "myapp", "1.2.3", "icon.png")
+
+    plist.should contain("<key>CFBundleIdentifier</key>")
+    plist.should contain("<string>dev.positron.myapp</string>")
+    plist.should contain("<key>CFBundleExecutable</key>")
+    plist.should contain("<string>myapp</string>")
+    plist.should contain("<key>CFBundlePackageType</key>")
+    plist.should contain("<string>APPL</string>")
+    plist.should contain("<string>1.2.3</string>")
+    plist.should contain("<key>CFBundleIconFile</key>")
+    plist.should contain("<string>icon.png</string>")
+
+    Positron::Packaging.info_plist("dev.positron.myapp", "My App", "myapp")
+      .should_not contain("CFBundleIconFile")
+  end
+
+  it "scaffolds a macOS .app bundle around a binary" do
+    dir = File.join(Dir.tempdir, "positron-appbundle-spec-#{Random::Secure.hex(6)}")
+    FileUtils.mkdir_p(dir)
+    binary = File.join(dir, "myapp")
+    File.write(binary, "#!/bin/sh\ntrue\n")
+    File.chmod(binary, 0o755)
+
+    result = Positron::Packaging.build_app_bundle("myapp", binary,
+      "dev.positron.myapp", output_dir: File.join(dir, "dist"))
+
+    result.should eq(File.join(dir, "dist", "myapp.app"))
+    app_bundle = result
+    File.exists?(File.join(app_bundle, "Contents", "Info.plist")).should be_true
+    File.exists?(File.join(app_bundle, "Contents", "MacOS", "myapp")).should be_true
+    plist = File.read(File.join(app_bundle, "Contents", "Info.plist"))
+    plist.should contain("dev.positron.myapp")
+    plist.should contain("<string>myapp</string>")
+    {% if flag?(:unix) %}
+      ((File.info(File.join(app_bundle, "Contents", "MacOS", "myapp")).permissions.value & 0o111) != 0).should be_true
+    {% end %}
+
+    FileUtils.rm_rf(dir)
+  end
 end
