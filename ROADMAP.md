@@ -5,10 +5,12 @@ implementation and a usable desktop framework in the spirit of Wails:
 a batteries-included toolkit with CLI tooling, hot reload, cross-platform
 WebView adapters, typed frontend bindings and packaging.
 
-**Status 2026-09:** M0–M4 and the Linux part of M6 are implemented and
-tested on Linux. M5 (macOS/Windows adapters) is the next big block; the
-architecture keeps all new platform code behind ports so it stays a
-pure adapter job. **Multi-window support is intentionally out of scope.**
+**Status 2026-10:** M0–M4, the Linux part of M6 and M5.1 (macOS
+WKWebView adapters) are implemented; M5.1 is verified on arm64 macOS 26
+with an end-to-end bridge smoke test. Windows (M5.2) and the macOS/Windows
+plugin adapter ports (M5.3) are next; the architecture keeps all new
+platform code behind ports so they stay pure adapter jobs. **Multi-window
+support is intentionally out of scope.**
 
 ## Where we are today
 
@@ -158,15 +160,27 @@ platform code in `adapters/linux/`, `event_loop/linux.cr`,
 `plugins/*/linux.cr` or behind `WebViewPort` defaults) keeps this a
 pure adapter job.
 
-**5.1 macOS (WKWebView)**
+**5.1 macOS (WKWebView) — ✅ done**
 
-- [ ] Crystal ObjC bindings for `NSApplication`, `NSWindow`, `WKWebView`,
-      `WKScriptMessageHandler`.
-- [ ] Replace `adapters/macos/webview.cr` stub: message handler →
+- [x] Crystal ObjC bindings for `NSApplication`, `NSWindow`, `WKWebView`,
+      `WKScriptMessageHandler` — pure Crystal through the ObjC runtime
+      (`adapters/macos/objc.cr`: one fixed-arity `objc_msgSend` shape,
+      `method_invoke` for NSRect-by-value calls, `objc_msgSendSuper` for
+      NSSize setters, NSInvocation for float args and struct returns;
+      delegates are dynamically registered NSObject subclasses whose IMPs
+      are Crystal procs).
+- [x] Replace `adapters/macos/webview.cr` stub: message handler →
       `Host#dispatch`, `evaluateJavaScript` → `eval_js`,
       `WKURLSchemeHandler` for custom schemes.
-- [ ] `event_loop/macos.cr`: NSRunLoop + Crystal scheduler integration.
-- [ ] Tray via `NSStatusItem`; window API from M3 on NSWindow.
+- [x] `event_loop/macos.cr`: `[NSApp run]` + CFRunLoopTimer driving
+      `Fiber.yield` and the run_on_main queue (mirrors the GLib idle
+      source on Linux).
+- [x] Tray via `NSStatusItem`; window API from M3 on NSWindow
+      (incl. `contentMinSize`/`contentMaxSize` — macOS 26 dropped
+      `minContentSize`/`maxContentSize`), devtools via
+      `developerExtrasEnabled` + `_inspectElement`.
+- Known gaps: drag & drop (`dnd.files`) — WKWebView consumes file drops,
+      no public hook; verified on arm64 (macOS 26, Crystal 1.20).
 
 **5.2 Windows (WebView2)**
 

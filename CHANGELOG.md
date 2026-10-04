@@ -6,6 +6,25 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **macOS adapters (M5.1):** real WKWebView/NSWindow WebViewPort, NSStatusItem
+  tray and NSApp event loop on top of a pure-Crystal Objective-C runtime
+  layer (`src/positron/adapters/macos/objc.cr`) — no bindings shard. The
+  layer works around Crystal's one-declaration-per-C-symbol rule with one
+  fixed-arity `objc_msgSend` shape plus `method_invoke` (NSRect-by-value
+  args), `objc_msgSendSuper` (NSSize args) and NSInvocation (float args,
+  4+ args, struct returns). Bridge shim injected as a WKUserScript,
+  messages received via a dynamically registered WKScriptMessageHandler,
+  custom URI schemes via WKURLSchemeHandler, full M3 window API on
+  NSWindow (`contentMinSize`/`contentMaxSize` — macOS 26 dropped
+  `minContentSize`/`maxContentSize`), devtools via `developerExtrasEnabled`
+  + `_inspectElement`, tray menus with checkable items/submenus, and a
+  CFRunLoopTimer fiber tick mirroring the Linux GLib idle source.
+  Verified on arm64 macOS 26 (all 8 examples build, 53 specs green,
+  end-to-end JS bridge smoke test through `app://`). Known gap: no
+  `dnd.files` — WKWebView consumes file drops with no public hook.
+
 ### Changed
 
 - Relicensed the project to MIT (`LICENSE`, `shard.yml`); previously the

@@ -9,11 +9,15 @@ runs in the OS WebView; Crystal owns all state and logic; the native
 shim (GTK/WebKitGTK on Linux) is a passive adapter. Assets embed at
 compile time into a single binary.
 
-Currently a **Linux-only reference implementation** of the Host-Shim
-pattern described in `positron-architecture.md`: macOS/Windows adapters
-are stubs (M5 in `ROADMAP.md`). `README.md` carries a status checklist
-(done vs missing) — keep it in sync with the actual state when features
-land.
+Currently a **Linux + macOS (arm64) reference implementation** of the
+Host-Shim pattern described in `positron-architecture.md`: Linux uses
+GTK/WebKitGTK, macOS uses WKWebView/NSWindow/NSStatusItem through a
+pure-Crystal Objective-C runtime layer (`adapters/macos/objc.cr` — see the
+header comment there for the dispatch-strategy constraints of Crystal's
+one-declaration-per-C-symbol rule). The Windows adapter is a stub (M5.2 in
+`ROADMAP.md`); the macOS plugin adapters (clipboard etc.) are stubs (M5.3).
+`README.md` carries a status checklist (done vs missing) — keep it in sync
+with the actual state when features land.
 
 ## Build & Test
 
@@ -43,8 +47,9 @@ All 8 examples must build cleanly and all specs must pass before a change
 is considered done.
 
 CI (`.github/workflows/ci.yml`) runs `crystal spec` and builds all examples
-on Ubuntu, macOS and Windows runners. Non-Linux jobs build against the
-adapter stubs; plugin factories gate platform requires by target flags so
+on Ubuntu, macOS and Windows runners. The macOS job builds the real
+WKWebView/NSStatusItem adapters; the Windows job builds against the
+adapter stubs. Plugin factories gate platform requires by target flags so
 Linux C libraries never leak into non-Linux link lines. Platform-specific
 specs (unix sockets, SQLite FFI) are flag-gated.
 
@@ -87,13 +92,22 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 ## Conventions
 
-- **Linux is the only working platform.** Windows, macOS, Android, iOS
-  adapters exist as stubs — do not assume they work.
-- **Platform code stays behind ports.** Any GTK/WebKit/native call
-  belongs in `src/positron/adapters/linux/`,
-  `src/positron/event_loop/linux.cr` or `src/positron/plugins/*/linux.cr`.
-  Core files must stay platform-pure — the macOS/Windows port (M5 in
-  `ROADMAP.md`) depends on that.
+- **Linux and macOS (arm64) are the working platforms.** The Windows,
+  Android, iOS adapters exist as stubs — do not assume they work. macOS
+  plugin adapters (clipboard, dialogs, …) are stubs too (M5.3).
+- **Platform code stays behind ports.** Any GTK/WebKit call belongs in
+  `src/positron/adapters/linux/`, `src/positron/event_loop/linux.cr` or
+  `src/positron/plugins/*/linux.cr`. Any AppKit/WebKit/ObjC call belongs
+  in `src/positron/adapters/macos/`, `src/positron/event_loop/macos.cr`
+  or `src/positron/plugins/*/macos.cr`. Core files must stay
+  platform-pure — the Windows port (M5.2 in `ROADMAP.md`) depends on that.
+- macOS ObjC bindings rules (`adapters/macos/objc.cr`): Crystal allows one
+  `fun` declaration per C symbol program-wide, so there is exactly one
+  fixed-arity `objc_msgSend` shape — go through `ObjC.send*` helpers,
+  `ObjC.invoke_rect3` (NSRect-by-value), `ObjC.send_size` (NSSize-by-value)
+  or `ObjC::Call` (NSInvocation: float args, 4+ args, struct returns).
+  Never hand-roll another `objc_msgSend` declaration. NSInvocation cannot
+  pass HFA struct *arguments* on arm64 — keep that in mind for new calls.
 - Plugins expose a `manifest` (for JS facade / TypeScript bindings
   generation) and a `bind` method (for command registration). Both must
   stay in sync.
@@ -120,7 +134,10 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 ## Known gaps (by design, not bugs)
 
-- No macOS/Windows adapters yet (M5 in `ROADMAP.md`) — stubs only.
+- Windows adapter is a stub (M5.2 in `ROADMAP.md`).
+- macOS plugin adapters (clipboard, dialogs, notifications, …) are
+  stubs — port with M5.3. No `dnd.files` on macOS: WKWebView consumes
+  file drops with no public hook.
 - No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.
 - Many Tier-2+ plugins from `plugins.txt` are not yet implemented.
