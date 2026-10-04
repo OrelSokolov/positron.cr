@@ -48,6 +48,8 @@ build:
         arch:
           verify: pkg-config --exists gtk+-3.0
           install: sudo pacman -S --needed gtk3
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists gtk+-3.0
 
@@ -62,6 +64,8 @@ build:
         arch:
           verify: pkg-config --exists webkit2gtk-4.1
           install: sudo pacman -S --needed webkit2gtk-4.1
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists webkit2gtk-4.1
 
@@ -76,6 +80,8 @@ build:
         arch:
           verify: pkg-config --exists ayatana-appindicator3-0.1
           install: sudo pacman -S --needed libayatana-appindicator
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists ayatana-appindicator3-0.1
 
@@ -90,6 +96,8 @@ build:
         arch:
           verify: pkg-config --exists libnotify
           install: sudo pacman -S --needed libnotify
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists libnotify
 
@@ -105,6 +113,27 @@ build:
         from: bin
         include: ["*"]
         to: [debian-12, ubuntu-22.04, ubuntu-24.04, ubuntu-25.10, fedora-41, arch]
+
+    # Windows builds against the adapter stubs (same as the CI windows job):
+    # no GTK/WebKitGTK stack — the Linux C libraries never reach the link
+    # line. Steps run under cmd.exe; mode: copy because symlinks need
+    # developer mode on Windows. crystal build drops the runtime DLLs
+    # (gc.dll, libcrypto, ...) next to each .exe, so the fan-in copies
+    # *.exe and *.dll into bin/.
+    - id: windows
+      build: windows/amd64
+      steps:
+        - crystal spec          # specs must pass — same gate as CI
+        - rake build:cli        # bin/positron.exe
+        - rake build:examples   # examples/<name>/<name>.exe, logs to logs/
+        - copy /y third_party\webview\webview.dll bin\
+        - 'for /d %d in (examples\*) do @copy /y "%d\*.exe" bin\'
+        - 'for /d %d in (examples\*) do @copy /y "%d\*.dll" bin\'
+      artifacts:
+        from: bin
+        include: ["*.exe", "*.dll"]
+        to: [windows-11.0]
+        mode: copy
 
 # Runtime-axis dependencies: the native libraries a Positron application
 # links at run time, per distro family. Linux only — the framework's

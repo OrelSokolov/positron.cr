@@ -6,6 +6,24 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Windows host support in `crosspack`: a `windows` matrix entry (specs +
+  CLI + all examples against the native adapters) and Windows host rules
+  for the GTK build deps (the GUI stack is not linked on Windows).
+- Real Windows adapters (M5.2 stage 1): WebView2 window via the vendored
+  `webview.dll` 0.12.0 (`third_party/webview/`, loaded at runtime — no
+  import library), Win32 message pump event loop with Crystal fiber
+  integration (WM_TIMER cooperative tick, `run_on_main` via
+  `webview_dispatch`), `Shell_NotifyIcon` tray with popup menu, window
+  management (resize/min/max/fullscreen/topmost/frameless/center) with
+  `window.*` events, close-to-tray via a subclassed WndProc, and the JS
+  bridge through `webview_bind`/`webview_eval`. `hello`, `theme_demo` and
+  the other examples now open real windows on Windows.
+- Windows theme adapter: dark/light + accent color from the registry
+  (`reg query`), replacing the "not yet implemented" stub warning.
+- `crosspack build` on Windows fans `webview.dll` into the artifact tree.
+
 ### Changed
 
 - Relicensed the project to MIT (`LICENSE`, `shard.yml`); previously the

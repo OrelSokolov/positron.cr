@@ -6,9 +6,12 @@ a batteries-included toolkit with CLI tooling, hot reload, cross-platform
 WebView adapters, typed frontend bindings and packaging.
 
 **Status 2026-09:** M0–M4 and the Linux part of M6 are implemented and
-tested on Linux. M5 (macOS/Windows adapters) is the next big block; the
-architecture keeps all new platform code behind ports so it stays a
-pure adapter job. **Multi-window support is intentionally out of scope.**
+tested on Linux. M5.2 (Windows) stage 1 is implemented and tested on
+Windows 11: real WebView2 window, event loop, tray and theme (details
+below); M5.1 (macOS) and the Windows M4 plugin adapters are the next
+block. The architecture keeps all platform code behind ports so it stays
+a pure adapter job. **Multi-window support is intentionally out of
+scope.**
 
 ## Where we are today
 
@@ -170,13 +173,25 @@ pure adapter job.
 
 **5.2 Windows (WebView2)**
 
-- [ ] WebView2 C API (ICoreWebView2*) via FFI; loader
-      `CreateCoreWebView2EnvironmentWithOptions`.
-- [ ] Win32 window + message loop (`event_loop/windows.cr`) with the
-      PeekMessage/UV_NOWAIT cooperative pattern.
-- [ ] `WebMessageReceived` → `Host#dispatch`; `ExecuteScript` →
-      `eval_js`; `SetVirtualHostNameToFolderMapping` for assets.
-- [ ] Tray via `Shell_NotifyIcon`.
+- [x] WebView2 window via the vendored `webview.dll` 0.12.0 C API
+      (`third_party/webview/`), loaded at runtime — no import library,
+      loader statically linked inside the DLL.
+- [x] Win32 message loop (`event_loop/windows.cr`) with a WM_TIMER
+      cooperative tick (Fiber.yield in the pump — same pattern as the
+      GLib idle source on Linux); `run_on_main` via `webview_dispatch`.
+- [x] `webview_bind` → `Host#dispatch`; `webview_eval` → `eval_js`
+      (always marshalled to the UI thread).
+- [ ] Custom asset schemes: `register_uri_scheme` raises (C API has no
+      hook; future: SetVirtualHostNameToFolderMapping). Examples are
+      unaffected — embedded assets are inlined into the HTML.
+- [x] Tray via `Shell_NotifyIcon` (hidden message window +
+      `TrackPopupMenu`, KB135788 foreground fix).
+- [x] M3 window API on the Win32 HWND (subclass WndProc for
+      WM_CLOSE→hide and `window.*` events); devtools: F12 in dev builds
+      only (`open_devtools` raises).
+- [x] Theme plugin: dark/light + accent from the registry.
+- [ ] M4 plugin adapters on Windows (clipboard, dialogs, file_picker,
+      save_file_dialog, notifications, display, keyboard) — stubs remain.
 
 **5.3 Cross-cutting**
 

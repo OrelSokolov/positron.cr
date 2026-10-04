@@ -46,6 +46,8 @@ require "./positron/host"
 {% end %}
 
 {% if flag?(:win32) %}
+  require "./positron/adapters/windows/win32"
+  require "./positron/adapters/windows/lib_webview"
   require "./positron/adapters/windows/webview2"
   require "./positron/adapters/windows/tray"
   require "./positron/adapters/windows/icon"
