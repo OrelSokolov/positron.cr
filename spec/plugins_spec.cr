@@ -101,13 +101,18 @@ end
   end
 {% end %}
 
-{% if flag?(:unix) %}
+{% if flag?(:unix) || flag?(:win32) %}
   describe Positron::Plugins::SecureStorage do
     it "stores and retrieves secrets across plugin instances" do
       data_home = temp_dir()
-      old_data = ENV["XDG_DATA_HOME"]?
+      {% if flag?(:win32) %}
+        old_data = ENV["APPDATA"]?
+        ENV["APPDATA"] = data_home
+      {% else %}
+        old_data = ENV["XDG_DATA_HOME"]?
+        ENV["XDG_DATA_HOME"] = data_home
+      {% end %}
       old_key = ENV["POSITRON_STORAGE_KEY"]?
-      ENV["XDG_DATA_HOME"] = data_home
       ENV["POSITRON_STORAGE_KEY"] = "spec-passphrase"
 
       plugin = Positron::Plugins::SecureStorage.new(app_id: "specapp")
@@ -136,19 +141,28 @@ end
       stored = File.read(File.join(data_home, "specapp", "secure-storage.bin"))
       stored.should_not contain("abc123")
 
-      ENV["XDG_DATA_HOME"] = old_data
+      {% if flag?(:win32) %}
+        ENV["APPDATA"] = old_data
+      {% else %}
+        ENV["XDG_DATA_HOME"] = old_data
+      {% end %}
       ENV["POSITRON_STORAGE_KEY"] = old_key
       FileUtils.rm_rf(data_home)
     end
   end
 {% end %}
 
-{% if flag?(:unix) %}
+{% if flag?(:unix) || flag?(:win32) %}
   describe Positron::Plugins::DeepLinks do
     it "grants the socket to the first instance only" do
       runtime_dir = temp_dir()
-      old_runtime = ENV["XDG_RUNTIME_DIR"]?
-      ENV["XDG_RUNTIME_DIR"] = runtime_dir
+      {% if flag?(:win32) %}
+        old_runtime = ENV["LOCALAPPDATA"]?
+        ENV["LOCALAPPDATA"] = runtime_dir
+      {% else %}
+        old_runtime = ENV["XDG_RUNTIME_DIR"]?
+        ENV["XDG_RUNTIME_DIR"] = runtime_dir
+      {% end %}
 
       first = Positron::Plugins::DeepLinks.new(app_id: "specapp")
       first.single_instance?.should be_true
@@ -163,7 +177,11 @@ end
       second = Positron::Plugins::DeepLinks.new(app_id: "specapp")
       second.single_instance?.should be_false
 
-      ENV["XDG_RUNTIME_DIR"] = old_runtime
+      {% if flag?(:win32) %}
+        ENV["LOCALAPPDATA"] = old_runtime
+      {% else %}
+        ENV["XDG_RUNTIME_DIR"] = old_runtime
+      {% end %}
       FileUtils.rm_rf(runtime_dir)
     end
 

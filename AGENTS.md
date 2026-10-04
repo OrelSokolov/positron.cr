@@ -49,7 +49,9 @@ specs (unix sockets, SQLite FFI) are flag-gated.
   plugin), rsvg-convert or ImageMagick + appimagetool (packaging)
 - Windows: the Microsoft Edge WebView2 runtime (preinstalled on Win10/11)
   and the vendored `third_party/webview/webview.dll` (shipped next to the
-  exe by `crosspack build`)
+  exe by `crosspack build`); Win10+ for the deep-links AF_UNIX handshake;
+  the opt-in SQLite plugin links the system `winsqlite3.dll` (import
+  library comes with the Windows SDK — no vendoring needed)
 
 ## Project layout
 
@@ -85,7 +87,12 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 - **Linux is the reference platform; Windows is functional** (M5.2
   stage 1: WebView2 window + JS bridge + event loop + tray + theme via
   the vendored `third_party/webview/webview.dll`, loaded at runtime —
-  keep the DLL next to the exe or under `third_party/webview/`).
+  keep the DLL next to the exe or under `third_party/webview/`;
+  stage 2: clipboard, dialogs, file picker, save dialog, notifications,
+  display, preferences adapters; stage 3: POSIX-neutral plugins fixed —
+  fs dirs (`APPDATA`/`LOCALAPPDATA`), deep_links single instance over
+  AF_UNIX, secure_storage under `%APPDATA%`, SQLite via the system
+  `winsqlite3.dll`).
   macOS adapters remain stubs — do not assume they work.
 - **Platform code stays behind ports.** Any GTK/WebKit/native call
   belongs in `src/positron/adapters/linux/`,
@@ -120,6 +127,8 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 - Windows: `register_uri_scheme` and the devtools window API raise
   (devtools are reachable via F12 when running with `POSITRON_DEV=1`).
+  Deep-link scheme *registration* (registry keys) is a packaging
+  concern on Windows, like `.desktop` on Linux.
 - No macOS adapters yet (M5.1 in `ROADMAP.md`) — stubs only.
 - No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.

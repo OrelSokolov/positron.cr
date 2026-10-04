@@ -6,12 +6,13 @@ a batteries-included toolkit with CLI tooling, hot reload, cross-platform
 WebView adapters, typed frontend bindings and packaging.
 
 **Status 2026-09:** M0–M4 and the Linux part of M6 are implemented and
-tested on Linux. M5.2 (Windows) stage 1 is implemented and tested on
-Windows 11: real WebView2 window, event loop, tray and theme (details
-below); M5.1 (macOS) and the Windows M4 plugin adapters are the next
-block. The architecture keeps all platform code behind ports so it stays
-a pure adapter job. **Multi-window support is intentionally out of
-scope.**
+tested on Linux. M5.2 (Windows) is implemented and tested on Windows
+11: real WebView2 window, event loop, tray, theme (stage 1); the M4
+plugin adapters (stage 2); and the POSIX-neutral plugins — fs dirs,
+deep_links single instance, secure_storage, SQLite via the system
+winsqlite3 (stage 3). M5.1 (macOS) is the next block. The architecture
+keeps all platform code behind ports so it stays a pure adapter job.
+**Multi-window support is intentionally out of scope.**
 
 ## Where we are today
 
@@ -196,6 +197,11 @@ pure adapter job.
       (comdlg32), notifications (Shell_NotifyIcon balloons), display
       (EnumDisplayMonitors + per-monitor DPI). The keyboard plugin has
       no adapter — it is frontend-driven.
+- [x] POSIX-neutral plugins on Windows: `fs` dirs from
+      `USERPROFILE`/`APPDATA`/`LOCALAPPDATA`, `deep_links`
+      single-instance handshake over AF_UNIX (Win10+, socket in
+      `%LOCALAPPDATA%`), `secure_storage` store under `%APPDATA%`,
+      opt-in SQLite against the system `winsqlite3.dll` (Win10+).
 
 **5.3 Cross-cutting**
 

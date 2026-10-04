@@ -208,7 +208,13 @@ module Positron::Plugins
       args[key]?.try(&.as_s?) || ""
     end
 
-    @[Link("sqlite3")]
+    {% if flag?(:win32) %}
+      # Win10+ ships SQLite as a system component (winsqlite3.dll); the
+      # Windows SDK provides the matching import library.
+      @[Link("winsqlite3")]
+    {% else %}
+      @[Link("sqlite3")]
+    {% end %}
     lib LibSQLite3
       fun sqlite3_open_v2(filename : LibC::Char*, db : Void**, flags : Int32, vfs : LibC::Char*) : Int32
       fun sqlite3_close_v2(db : Void*) : Int32

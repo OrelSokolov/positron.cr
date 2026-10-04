@@ -23,8 +23,8 @@ module Positron::Plugins
   #   use Positron::Plugins::Filesystem.new(root: "/home/user/docs")
   #
   # This plugin has no platform adapters: it is pure Crystal. App dirs
-  # follow the XDG base directory spec on Linux and fall back to
-  # platform-neutral locations elsewhere.
+  # follow the XDG base directory spec on Linux, the known folders
+  # (%APPDATA% / %LOCALAPPDATA%) on Windows, neutral fallbacks elsewhere.
   class Filesystem < Positron::Plugin
     def initialize(@app_id : String = "positron", @root : String? = nil)
     end
@@ -133,10 +133,14 @@ module Positron::Plugins
       end
     end
 
-    # --- Directory helpers (XDG-aware) ---
+    # --- Directory helpers (XDG on Linux, known folders on Windows) ---
 
     def home_dir : String
-      ENV["HOME"]? || "/"
+      {% if flag?(:win32) %}
+        ENV["USERPROFILE"]? || "/"
+      {% else %}
+        ENV["HOME"]? || "/"
+      {% end %}
     end
 
     def temp_dir : String
@@ -146,6 +150,9 @@ module Positron::Plugins
     def app_data_dir : String
       base = {% if flag?(:linux) && !flag?(:android) %}
                ENV["XDG_DATA_HOME"]? || File.join(home_dir, ".local", "share")
+             {% elsif flag?(:win32) %}
+               # Roaming profile data (per-user, follows the user)
+               ENV["APPDATA"]? || File.join(home_dir, "AppData", "Roaming")
              {% else %}
                ENV["POSITRON_DATA"]? || File.join(home_dir, ".local", "share")
              {% end %}
@@ -155,10 +162,17 @@ module Positron::Plugins
     def app_cache_dir : String
       base = {% if flag?(:linux) && !flag?(:android) %}
                ENV["XDG_CACHE_HOME"]? || File.join(home_dir, ".cache")
+             {% elsif flag?(:win32) %}
+               # Machine-local cache (never roams with the profile)
+               ENV["LOCALAPPDATA"]? || File.join(home_dir, "AppData", "Local")
              {% else %}
                ENV["POSITRON_CACHE"]? || File.join(home_dir, ".cache")
              {% end %}
-      File.join(base, @app_id)
+      {% if flag?(:win32) %}
+        File.join(base, @app_id, "cache")
+      {% else %}
+        File.join(base, @app_id)
+      {% end %}
     end
 
     # Resolve a frontend-supplied path. Relative paths resolve against the

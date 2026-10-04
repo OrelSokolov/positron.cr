@@ -30,6 +30,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
   display info (EnumDisplayMonitors, GetDpiForMonitor, physical size in
   mm). Verified headlessly: clipboard round-trip (UTF-8/Cyrillic),
   monitor enumeration (resolution/scale/Hz/mm) and theme/accent.
+- Windows support for the platform-neutral plugins that still assumed
+  POSIX: `fs` dirs (`USERPROFILE`/`APPDATA`/`LOCALAPPDATA` instead of
+  `HOME`/XDG), `deep_links` single-instance handshake over AF_UNIX
+  (Win10+) with the socket in `%LOCALAPPDATA%`, `secure_storage` store
+  under `%APPDATA%`, and the opt-in SQLite plugin linking the system
+  `winsqlite3.dll`. The previously unix-gated specs (deep_links,
+  secure_storage, sqlite) now run on win32 too.
 - `crosspack build` on Windows fans `webview.dll` into the artifact tree.
 
 ### Changed
@@ -37,12 +44,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Relicensed the project to MIT (`LICENSE`, `shard.yml`); previously the
   LICENSE file granted non-commercial rights only while `README.md`
   claimed MIT. All three now agree on MIT.
-- Windows/macOS CI builds: `deep_links` (unix sockets) and
-  `secure_storage` (OpenSSL) plugins are now required only on unix
-  targets, so Windows stub builds link no native libraries; the
-  corresponding specs are flag-gated. CI installs `openssl@3` (with
-  `PKG_CONFIG_PATH`) on macOS and `libsqlite3-dev` on Linux for the
-  unix-gated specs, and builds the `positron` CLI on every runner.
+- Plugin/CI gating: `deep_links` and `secure_storage` are included on
+  unix **and Windows** (deep_links speaks AF_UNIX on Win10+,
+  secure_storage uses the OpenSSL DLLs shipped with Crystal); the
+  opt-in SQLite plugin links `sqlite3` on unix and the system
+  `winsqlite3` (SDK import lib) on Windows. Specs are flag-gated
+  accordingly. CI installs `openssl@3` (with `PKG_CONFIG_PATH`) on
+  macOS and `libsqlite3-dev` on Linux, and builds the `positron` CLI on
+  every runner.
 - Window plugin: command blocks now return explicit `JSON::Any` (was an
   uninferred block return type), fixing compilation on newer Crystal
   releases where the `-> _` inference is rejected.
