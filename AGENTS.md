@@ -3,7 +3,8 @@
 ## What this is
 
 Positron is a **cross-platform UI framework for JS + CSS apps with a
-Crystal backend** — "Wails for Crystal" (see `README.md`). The frontend
+Crystal backend** — "Electron on Crystal": OS WebView instead of a bundled
+Chromium (see `README.md`). The frontend
 runs in the OS WebView; Crystal owns all state and logic; the native
 shim (GTK/WebKitGTK on Linux) is a passive adapter. Assets embed at
 compile time into a single binary.

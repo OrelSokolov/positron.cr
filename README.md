@@ -1,10 +1,11 @@
-# Positron — Wails for Crystal
+# Positron — Electron on Crystal
 
 **Positron is a cross-platform UI framework for building desktop apps with a
-JS + CSS frontend and a Crystal backend** — the same idea as
-[Wails](https://wails.io) (Go) or Electron, but with Crystal instead, and
-without the Chromium/Node bundle: the OS WebView renders your frontend while
-all state and logic live in a single Crystal process.
+JS + CSS frontend and a Crystal backend — Electron's model, with Crystal
+instead of Node.js, and without the bundled Chromium**: the OS WebView
+renders your frontend while all state and logic live in a single Crystal
+process (the same lightweight approach as [Wails](https://wails.io) for Go
+or Tauri for Rust).
 
 ```crystal
 class MyApp < Positron::Application
