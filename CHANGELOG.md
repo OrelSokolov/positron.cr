@@ -6,17 +6,66 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Windows host support in `crosspack`: a `windows` matrix entry (specs +
+  CLI + all examples against the native adapters) and Windows host rules
+  for the GTK build deps (the GUI stack is not linked on Windows).
+- Real Windows adapters (M5.2 stage 1): WebView2 window via the vendored
+  `webview.dll` 0.12.0 (`third_party/webview/`, loaded at runtime — no
+  import library), Win32 message pump event loop with Crystal fiber
+  integration (WM_TIMER cooperative tick, `run_on_main` via
+  `webview_dispatch`), `Shell_NotifyIcon` tray with popup menu, window
+  management (resize/min/max/fullscreen/topmost/frameless/center) with
+  `window.*` events, close-to-tray via a subclassed WndProc, and the JS
+  bridge through `webview_bind`/`webview_eval`. `hello`, `theme_demo` and
+  the other examples now open real windows on Windows.
+- Windows theme adapter: dark/light + accent color from the registry
+  (`reg query`), replacing the "not yet implemented" stub warning.
+- Windows M4 plugin adapters: clipboard (text/files/BMP images via
+  CF_UNICODETEXT/CF_HDROP/CF_DIB, GDI+ for image writing), dialogs
+  (MessageBoxW for alert/confirm, a native prompt window for input),
+  file_picker and save_file_dialog (comdlg32 Get{Open,Save}FileNameW),
+  notifications (Shell_NotifyIcon balloons with click-through), and
+  display info (EnumDisplayMonitors, GetDpiForMonitor, physical size in
+  mm). Verified headlessly: clipboard round-trip (UTF-8/Cyrillic),
+  monitor enumeration (resolution/scale/Hz/mm) and theme/accent.
+- Windows support for the platform-neutral plugins that still assumed
+  POSIX: `fs` dirs (`USERPROFILE`/`APPDATA`/`LOCALAPPDATA` instead of
+  `HOME`/XDG), `deep_links` single-instance handshake over AF_UNIX
+  (Win10+) with the socket in `%LOCALAPPDATA%`, `secure_storage` store
+  under `%APPDATA%`, and the opt-in SQLite plugin linking the system
+  `winsqlite3.dll`. The previously unix-gated specs (deep_links,
+  secure_storage, sqlite) now run on win32 too.
+- `register_uri_scheme` on Windows: `app://x` is served from the host
+  process over the virtual host `https://app.positron.local/x` using
+  WebView2's WebResourceRequested interception (raw COM vtable calls
+  from the browser-controller handle `webview_get_native_handle`
+  exposes — see `adapters/windows/webview2_com.cr`). Navigations to
+  registered schemes are rewritten and held back until the interception
+  is installed; relative asset paths work as on Linux.
+- Distribution via crosspack: a `package:` section in `crosspack.yml`
+  — `crosspack pack` produces a WiX MSI on Windows (positron CLI +
+  examples + runtime DLLs under Program Files, Start Menu/Desktop
+  shortcuts) and deb/rpm payloads for Linux builds.
+- CI: the Windows runner now builds the real M5.2 adapters (webview.dll
+  vendored in-repo, winsqlite3 import lib from the SDK, OpenSSL DLLs
+  bundled with Crystal) instead of the stubs.
+- `crosspack build` on Windows fans `webview.dll` into the artifact tree.
+
 ### Changed
 
 - Relicensed the project to MIT (`LICENSE`, `shard.yml`); previously the
   LICENSE file granted non-commercial rights only while `README.md`
   claimed MIT. All three now agree on MIT.
-- Windows/macOS CI builds: `deep_links` (unix sockets) and
-  `secure_storage` (OpenSSL) plugins are now required only on unix
-  targets, so Windows stub builds link no native libraries; the
-  corresponding specs are flag-gated. CI installs `openssl@3` (with
-  `PKG_CONFIG_PATH`) on macOS and `libsqlite3-dev` on Linux for the
-  unix-gated specs, and builds the `positron` CLI on every runner.
+- Plugin/CI gating: `deep_links` and `secure_storage` are included on
+  unix **and Windows** (deep_links speaks AF_UNIX on Win10+,
+  secure_storage uses the OpenSSL DLLs shipped with Crystal); the
+  opt-in SQLite plugin links `sqlite3` on unix and the system
+  `winsqlite3` (SDK import lib) on Windows. Specs are flag-gated
+  accordingly. CI installs `openssl@3` (with `PKG_CONFIG_PATH`) on
+  macOS and `libsqlite3-dev` on Linux, and builds the `positron` CLI on
+  every runner.
 - Window plugin: command blocks now return explicit `JSON::Any` (was an
   uninferred block return type), fixing compilation on newer Crystal
   releases where the `-> _` inference is rejected.

@@ -3,12 +3,14 @@ require "log"
 require "socket"
 
 module Positron::Plugins
-  # Deep links / URL schemes plugin (Linux desktop).
+  # Deep links / URL schemes plugin (Linux desktop, Windows).
   #
   # Two responsibilities:
   #
   # 1. **Single instance.** The plugin tries to bind a unix socket at
-  #    `$XDG_RUNTIME_DIR/positron-<app_id>.sock`. If the socket is
+  #    `$XDG_RUNTIME_DIR/positron-<app_id>.sock` (Linux) or
+  #    `%LOCALAPPDATA%\positron-<app_id>.sock` (Windows, via AF_UNIX on
+  #    Win10+). If the socket is
   #    already owned by a live instance, this process forwards every
   #    `ARGV` entry matching the scheme to it and `single_instance?`
   #    returns false — skip `Application#run` in that case:
@@ -153,9 +155,16 @@ module Positron::Plugins
     end
 
     private def socket_path : String?
-      runtime_dir = ENV["XDG_RUNTIME_DIR"]?
-      return nil unless runtime_dir
-      File.join(runtime_dir, "positron-#{@app_id}.sock")
+      {% if flag?(:win32) %}
+        # AF_UNIX exists on Windows 10+; Crystal supports it. There is no
+        # XDG_RUNTIME_DIR — %LOCALAPPDATA% plays that role.
+        base = ENV["LOCALAPPDATA"]? || Dir.tempdir
+        File.join(base, "positron-#{@app_id}.sock")
+      {% else %}
+        runtime_dir = ENV["XDG_RUNTIME_DIR"]?
+        return nil unless runtime_dir
+        File.join(runtime_dir, "positron-#{@app_id}.sock")
+      {% end %}
     end
   end
 end

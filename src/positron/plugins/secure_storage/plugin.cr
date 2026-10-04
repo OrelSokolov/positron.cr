@@ -194,7 +194,11 @@ module Positron::Plugins
     end
 
     private def store_path : String
-      base = ENV["XDG_DATA_HOME"]? || File.join(ENV["HOME"]? || "/", ".local", "share")
+      base = {% if flag?(:win32) %}
+               ENV["APPDATA"]? || File.join(ENV["USERPROFILE"]? || "/", "AppData", "Roaming")
+             {% else %}
+               ENV["XDG_DATA_HOME"]? || File.join(ENV["HOME"]? || "/", ".local", "share")
+             {% end %}
       File.join(base, @app_id, "secure-storage.bin")
     end
 

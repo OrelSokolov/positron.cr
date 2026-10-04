@@ -34,27 +34,37 @@ crystal build examples/hello/hello.cr -o examples/hello/hello
 Build orchestration lives in `crosspack.yml` (the [crosspack](https://rubygems.org/gems/crosspack)
 gem, Ruby >= 3.2): `crosspack deps` verifies/installs the build-host
 dependencies, `crosspack build` runs specs + CLI + all examples and fans
-the binaries into `builds/<target>/`. There is intentionally **no
-`package:` section** — Positron is a library, not an end product; packing
-belongs to applications. Keep the `version:` in `crosspack.yml` in sync
+the binaries into `builds/<target>/`. On a Windows host `crosspack build`
+runs the `windows` matrix entry with the real M5.2 adapters (the
+GTK/WebKitGTK host deps verify as satisfied — they are Linux-only).
+`crosspack pack` packages the built artifacts per the `package:` section:
+an MSI via WiX on Windows (`wix` from `dotnet tool install -g wix`),
+deb/rpm on Linux. Keep the `version:` in `crosspack.yml` in sync
 with `shard.yml`.
 
 All 8 examples must build cleanly and all specs must pass before a change
 is considered done.
 
 CI (`.github/workflows/ci.yml`) runs `crystal spec` and builds all examples
-on Ubuntu, macOS and Windows runners. Non-Linux jobs build against the
-adapter stubs; plugin factories gate platform requires by target flags so
-Linux C libraries never leak into non-Linux link lines. Platform-specific
-specs (unix sockets, SQLite FFI) are flag-gated.
+on Ubuntu, macOS and Windows runners. The Windows job builds the **real**
+M5.2 adapters (webview.dll is vendored in-repo; SQLite links the SDK's
+winsqlite3 import lib; secure_storage uses the OpenSSL DLLs bundled with
+Crystal). macOS jobs build against the adapter stubs; plugin factories
+gate platform requires by target flags so Linux C libraries never leak
+into non-Linux link lines. Platform-specific specs (unix sockets,
+SQLite FFI) are flag-gated.
 
 ## Requirements
 
 - Crystal >= 1.10
-- GTK 3, WebKitGTK 4.1, Ayatana AppIndicator 3 dev files
-- libnotify (for the notifications plugin)
-- libsqlite3 dev files (only for the opt-in SQLite plugin)
-- rsvg-convert or ImageMagick, appimagetool (only for `positron package`)
+- Linux: GTK 3, WebKitGTK 4.1, Ayatana AppIndicator 3 dev files,
+  libnotify (notifications plugin), libsqlite3 dev files (opt-in SQLite
+  plugin), rsvg-convert or ImageMagick + appimagetool (packaging)
+- Windows: the Microsoft Edge WebView2 runtime (preinstalled on Win10/11)
+  and the vendored `third_party/webview/webview.dll` (shipped next to the
+  exe by `crosspack build`); Win10+ for the deep-links AF_UNIX handshake;
+  the opt-in SQLite plugin links the system `winsqlite3.dll` (import
+  library comes with the Windows SDK — no vendoring needed)
 
 ## Project layout
 
@@ -87,8 +97,16 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 ## Conventions
 
-- **Linux is the only working platform.** Windows, macOS, Android, iOS
-  adapters exist as stubs — do not assume they work.
+- **Linux is the reference platform; Windows is functional** (M5.2
+  stage 1: WebView2 window + JS bridge + event loop + tray + theme via
+  the vendored `third_party/webview/webview.dll`, loaded at runtime —
+  keep the DLL next to the exe or under `third_party/webview/`;
+  stage 2: clipboard, dialogs, file picker, save dialog, notifications,
+  display, preferences adapters; stage 3: POSIX-neutral plugins fixed —
+  fs dirs (`APPDATA`/`LOCALAPPDATA`), deep_links single instance over
+  AF_UNIX, secure_storage under `%APPDATA%`, SQLite via the system
+  `winsqlite3.dll`).
+  macOS adapters remain stubs — do not assume they work.
 - **Platform code stays behind ports.** Any GTK/WebKit/native call
   belongs in `src/positron/adapters/linux/`,
   `src/positron/event_loop/linux.cr` or `src/positron/plugins/*/linux.cr`.
@@ -120,7 +138,15 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 ## Known gaps (by design, not bugs)
 
-- No macOS/Windows adapters yet (M5 in `ROADMAP.md`) — stubs only.
+- Windows: custom URI schemes are served over a virtual https host
+  (`app://x` → `https://app.positron.local/x` via WebView2's
+  WebResourceRequested interception); absolute `app://` URLs inside
+  frontend assets do not resolve — use relative paths (the adapter
+  rewrites `load_url`). Devtools via the window API raise
+  (F12 works when running with `POSITRON_DEV=1`). Deep-link scheme
+  *registration* (registry keys) is a packaging concern on Windows,
+  like `.desktop` on Linux.
+- No macOS adapters yet (M5.1 in `ROADMAP.md`) — stubs only.
 - No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.
 - Many Tier-2+ plugins from `plugins.txt` are not yet implemented.

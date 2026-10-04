@@ -1,8 +1,9 @@
-{% if flag?(:unix) %}
+{% if flag?(:unix) || flag?(:win32) %}
   # The SQLite plugin binds libsqlite3 directly; it is an opt-in require
   # (`require "positron/plugins/sqlite/plugin"`) so applications without
   # a local database do not link it. This spec runs where the C library is
-  # available (Linux/macOS CI runners).
+  # available (Linux/macOS CI runners; Windows links the system
+  # winsqlite3.dll shipped with Win10+).
   require "../src/positron"
   require "../src/positron/plugins/sqlite/plugin"
   require "spec"

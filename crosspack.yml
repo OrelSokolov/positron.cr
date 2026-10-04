@@ -1,11 +1,9 @@
 # crosspack — build orchestration for the Positron shard.
 #
-# Positron is a library, not an end product: this file carries the build
-# matrix and the dependencies only. There is deliberately no package:
-# section — `crosspack pack` is for applications built *with* Positron.
-#
 #   crosspack deps              # verify/install this host's build deps
 #   crosspack build             # specs + CLI + all examples -> builds/
+#   crosspack pack              # package builds/ -> crosspacks/ (MSI on
+#                               # Windows via WiX, deb/rpm on Linux)
 #   crosspack resolve <target>  # runtime Depends line for a target
 #
 # The version follows shard.yml — bump both together.
@@ -48,6 +46,8 @@ build:
         arch:
           verify: pkg-config --exists gtk+-3.0
           install: sudo pacman -S --needed gtk3
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists gtk+-3.0
 
@@ -62,6 +62,8 @@ build:
         arch:
           verify: pkg-config --exists webkit2gtk-4.1
           install: sudo pacman -S --needed webkit2gtk-4.1
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists webkit2gtk-4.1
 
@@ -76,6 +78,8 @@ build:
         arch:
           verify: pkg-config --exists ayatana-appindicator3-0.1
           install: sudo pacman -S --needed libayatana-appindicator
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists ayatana-appindicator3-0.1
 
@@ -90,6 +94,8 @@ build:
         arch:
           verify: pkg-config --exists libnotify
           install: sudo pacman -S --needed libnotify
+        windows:
+          verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
         "*":
           verify: pkg-config --exists libnotify
 
@@ -105,6 +111,69 @@ build:
         from: bin
         include: ["*"]
         to: [debian-12, ubuntu-22.04, ubuntu-24.04, ubuntu-25.10, fedora-41, arch]
+
+    # Windows builds against the adapter stubs (same as the CI windows job):
+    # no GTK/WebKitGTK stack — the Linux C libraries never reach the link
+    # line. Steps run under cmd.exe; mode: copy because symlinks need
+    # developer mode on Windows. crystal build drops the runtime DLLs
+    # (gc.dll, libcrypto, ...) next to each .exe, so the fan-in copies
+    # *.exe and *.dll into bin/.
+    - id: windows
+      build: windows/amd64
+      steps:
+        - crystal spec          # specs must pass — same gate as CI
+        - rake build:cli        # bin/positron.exe
+        - rake build:examples   # examples/<name>/<name>.exe, logs to logs/
+        - copy /y third_party\webview\webview.dll bin\
+        - 'for /d %d in (examples\*) do @copy /y "%d\*.exe" bin\'
+        - 'for /d %d in (examples\*) do @copy /y "%d\*.dll" bin\'
+      artifacts:
+        from: bin
+        include: ["*.exe", "*.dll"]
+        to: [windows-11.0]
+        mode: copy
+
+# Distribution: what `crosspack pack` ships — the positron CLI plus the
+# example apps and the runtime DLLs they need (Windows flat under
+# Program Files via WiX MSI; Linux under /usr/lib/positron with symlinks
+# in /usr/bin). Payload keys are the common names; selectors map them to
+# the real file names each target's build produced.
+package:
+  maintainer: Oleg Orlov <orelcokolov@gmail.com>
+  description: |
+    Positron — desktop app framework in the spirit of Wails
+    (Crystal host + system WebView). This package carries the positron
+    CLI and the example apps demonstrating the plugin surface.
+  sources: builds
+  prefix: usr
+  lib_dir: lib/positron
+  license: MIT
+  payload:
+    positron: { linux: positron, windows: positron.exe }
+    hello: { linux: hello, windows: hello.exe }
+    clipboard: { linux: clipboard, windows: clipboard.exe }
+    display_info: { linux: display_info, windows: display_info.exe }
+    file_picker: { linux: file_picker, windows: file_picker.exe }
+    keyboard_demo: { linux: keyboard_demo, windows: keyboard_demo.exe }
+    save_file_dialog: { linux: save_file_dialog, windows: save_file_dialog.exe }
+    system_notifications: { linux: system_notifications, windows: system_notifications.exe }
+    theme_demo: { linux: theme_demo, windows: theme_demo.exe }
+    gc.dll: { windows: gc.dll }
+    iconv-2.dll: { windows: iconv-2.dll }
+    libcrypto-3-x64.dll: { windows: libcrypto-3-x64.dll }
+    libssl-3-x64.dll: { windows: libssl-3-x64.dll }
+    pcre2-8.dll: { windows: pcre2-8.dll }
+    zlib1.dll: { windows: zlib1.dll }
+    webview.dll: { windows: webview.dll }
+  executables: [hello, positron, clipboard, display_info, file_picker,
+                keyboard_demo, save_file_dialog, system_notifications,
+                theme_demo]
+  links:
+    bin/positron: ../lib/positron/positron
+  desktop:
+    name: Positron Hello
+    comment: Positron example app (Crystal host + WebView2)
+    categories: Development;
 
 # Runtime-axis dependencies: the native libraries a Positron application
 # links at run time, per distro family. Linux only — the framework's

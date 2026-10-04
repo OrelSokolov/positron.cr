@@ -19,7 +19,9 @@ require "./positron/plugins/lifecycle/plugin"
 require "./positron/plugins/permissions/plugin"
 # Unix-only plugins: deep_links binds unix sockets, secure_storage links
 # OpenSSL. Gated so Windows builds (adapter stubs) stay dependency-free.
-{% if flag?(:unix) %}
+# deep_links (AF_UNIX, Win10+) and secure_storage (Crystal's OpenSSL
+# bindings ship as DLLs on Windows) both work on Windows now.
+{% if flag?(:unix) || flag?(:win32) %}
   require "./positron/plugins/deep_links/plugin"
   require "./positron/plugins/secure_storage/plugin"
 {% end %}
@@ -46,6 +48,8 @@ require "./positron/host"
 {% end %}
 
 {% if flag?(:win32) %}
+  require "./positron/adapters/windows/win32"
+  require "./positron/adapters/windows/lib_webview"
   require "./positron/adapters/windows/webview2"
   require "./positron/adapters/windows/tray"
   require "./positron/adapters/windows/icon"

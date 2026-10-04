@@ -6,9 +6,13 @@ a batteries-included toolkit with CLI tooling, hot reload, cross-platform
 WebView adapters, typed frontend bindings and packaging.
 
 **Status 2026-09:** M0–M4 and the Linux part of M6 are implemented and
-tested on Linux. M5 (macOS/Windows adapters) is the next big block; the
-architecture keeps all new platform code behind ports so it stays a
-pure adapter job. **Multi-window support is intentionally out of scope.**
+tested on Linux. M5.2 (Windows) is implemented and tested on Windows
+11: real WebView2 window, event loop, tray, theme (stage 1); the M4
+plugin adapters (stage 2); and the POSIX-neutral plugins — fs dirs,
+deep_links single instance, secure_storage, SQLite via the system
+winsqlite3 (stage 3). M5.1 (macOS) is the next block. The architecture
+keeps all platform code behind ports so it stays a pure adapter job.
+**Multi-window support is intentionally out of scope.**
 
 ## Where we are today
 
@@ -170,13 +174,39 @@ pure adapter job.
 
 **5.2 Windows (WebView2)**
 
-- [ ] WebView2 C API (ICoreWebView2*) via FFI; loader
-      `CreateCoreWebView2EnvironmentWithOptions`.
-- [ ] Win32 window + message loop (`event_loop/windows.cr`) with the
-      PeekMessage/UV_NOWAIT cooperative pattern.
-- [ ] `WebMessageReceived` → `Host#dispatch`; `ExecuteScript` →
-      `eval_js`; `SetVirtualHostNameToFolderMapping` for assets.
-- [ ] Tray via `Shell_NotifyIcon`.
+- [x] WebView2 window via the vendored `webview.dll` 0.12.0 C API
+      (`third_party/webview/`), loaded at runtime — no import library,
+      loader statically linked inside the DLL.
+- [x] Win32 message loop (`event_loop/windows.cr`) with a WM_TIMER
+      cooperative tick (Fiber.yield in the pump — same pattern as the
+      GLib idle source on Linux); `run_on_main` via `webview_dispatch`.
+- [x] `webview_bind` → `Host#dispatch`; `webview_eval` → `eval_js`
+      (always marshalled to the UI thread).
+- [x] Custom asset schemes: `register_uri_scheme` serves through
+      WebView2's WebResourceRequested COM interception (raw vtable
+      calls from the browser-controller handle webview.dll exposes) on
+      a virtual host `https://<scheme>.positron.local` — see
+      `adapters/windows/webview2_com.cr`. `app://x` navigations are
+      rewritten; relative asset paths work, absolute `app://` URLs in
+      frontend assets do not (scheme registration would need to happen
+      inside webview.dll's environment creation).
+- [x] Tray via `Shell_NotifyIcon` (hidden message window +
+      `TrackPopupMenu`, KB135788 foreground fix).
+- [x] M3 window API on the Win32 HWND (subclass WndProc for
+      WM_CLOSE→hide and `window.*` events); devtools: F12 in dev builds
+      only (`open_devtools` raises).
+- [x] Theme plugin: dark/light + accent from the registry.
+- [x] M4 plugin adapters on Windows: clipboard (CF_UNICODETEXT /
+      CF_HDROP / CF_DIB, images via GDI+), dialogs (MessageBoxW + a
+      hand-rolled prompt window), file_picker & save_file_dialog
+      (comdlg32), notifications (Shell_NotifyIcon balloons), display
+      (EnumDisplayMonitors + per-monitor DPI). The keyboard plugin has
+      no adapter — it is frontend-driven.
+- [x] POSIX-neutral plugins on Windows: `fs` dirs from
+      `USERPROFILE`/`APPDATA`/`LOCALAPPDATA`, `deep_links`
+      single-instance handshake over AF_UNIX (Win10+, socket in
+      `%LOCALAPPDATA%`), `secure_storage` store under `%APPDATA%`,
+      opt-in SQLite against the system `winsqlite3.dll` (Win10+).
 
 **5.3 Cross-cutting**
 
@@ -199,7 +229,10 @@ on macOS and Windows with feature parity for the M4 core plugins.
 - [x] `positron package [--install]` ties it together (verified:
       release build → icons → .desktop → AppDir).
 - [ ] AppImage end-to-end once appimagetool is available in the env.
-- [ ] Windows (NSIS) and macOS (.app/dmg) templates — after M5.
+- [x] Windows distribution via crosspack: `crosspack pack` builds a
+      WiX MSI from the `windows` matrix artifacts (M6 Windows part —
+      NSIS dropped in favour of the already-supported MSI).
+- [ ] macOS (.app/dmg) templates — after M5.1.
 - [ ] Document code signing — manual docs only.
 
 ---
