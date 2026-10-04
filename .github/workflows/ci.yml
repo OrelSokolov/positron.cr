@@ -22,7 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         # Linux is the fully supported platform (real GTK/WebKitGTK
-        # adapters); Windows and macOS build against the adapter stubs.
+        # adapters); Windows builds the real M5.2 adapters (WebView2 via
+        # the vendored webview.dll, SQLite via the SDK winsqlite3 import
+        # lib). macOS builds against the adapter stubs.
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
@@ -49,10 +51,12 @@ jobs:
           brew install openssl@3
           echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
 
-      # Windows builds against the adapter stubs only: unix-only plugins
-      # (deep_links, secure_storage) and the SQLite spec are flag-gated
-      # out, so no native dependencies are required. WebView2 / OpenSSL
-      # dependencies get added here together with the M5 adapters.
+      # Windows: no extra installs. The real M5.2 adapters link nothing
+      # beyond the Crystal toolchain: webview.dll is vendored in-repo
+      # (loaded at runtime), SQLite uses the system winsqlite3.dll via
+      # the Windows SDK import library shipped with the runner image,
+      # and secure_storage uses the OpenSSL DLLs bundled with Crystal.
+      # deep_links needs AF_UNIX (Win10+ runners).
 
       - name: Install Crystal
         uses: crystal-lang/install-crystal@v1

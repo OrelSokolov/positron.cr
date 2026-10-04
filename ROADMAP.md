@@ -182,9 +182,14 @@ pure adapter job.
       GLib idle source on Linux); `run_on_main` via `webview_dispatch`.
 - [x] `webview_bind` → `Host#dispatch`; `webview_eval` → `eval_js`
       (always marshalled to the UI thread).
-- [ ] Custom asset schemes: `register_uri_scheme` raises (C API has no
-      hook; future: SetVirtualHostNameToFolderMapping). Examples are
-      unaffected — embedded assets are inlined into the HTML.
+- [x] Custom asset schemes: `register_uri_scheme` serves through
+      WebView2's WebResourceRequested COM interception (raw vtable
+      calls from the browser-controller handle webview.dll exposes) on
+      a virtual host `https://<scheme>.positron.local` — see
+      `adapters/windows/webview2_com.cr`. `app://x` navigations are
+      rewritten; relative asset paths work, absolute `app://` URLs in
+      frontend assets do not (scheme registration would need to happen
+      inside webview.dll's environment creation).
 - [x] Tray via `Shell_NotifyIcon` (hidden message window +
       `TrackPopupMenu`, KB135788 foreground fix).
 - [x] M3 window API on the Win32 HWND (subclass WndProc for
@@ -224,7 +229,10 @@ on macOS and Windows with feature parity for the M4 core plugins.
 - [x] `positron package [--install]` ties it together (verified:
       release build → icons → .desktop → AppDir).
 - [ ] AppImage end-to-end once appimagetool is available in the env.
-- [ ] Windows (NSIS) and macOS (.app/dmg) templates — after M5.
+- [x] Windows distribution via crosspack: `crosspack pack` builds a
+      WiX MSI from the `windows` matrix artifacts (M6 Windows part —
+      NSIS dropped in favour of the already-supported MSI).
+- [ ] macOS (.app/dmg) templates — after M5.1.
 - [ ] Document code signing — manual docs only.
 
 ---

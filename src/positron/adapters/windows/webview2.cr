@@ -2,6 +2,7 @@ require "json"
 require "log"
 require "uri"
 require "./lib_webview"
+require "./webview2_com"
 
 module Positron
   module Adapters
@@ -27,6 +28,19 @@ module Positron
         @last_maximized : Bool = false
         @fullscreen_rect : Win32::LibUser32::Rect?
         @fullscreen_style : UInt64?
+        @scheme_handlers = {} of String => Proc(String, SchemeResponse?)
+        @schemes_applied = false
+        @scheme_apply_started = false
+        @pending_url : String? = nil
+        @com_env : Void* = Pointer(Void).null
+
+        # Custom schemes are served through WebView2's WebResourceRequested
+        # interception on a virtual host: `app://x` is rewritten to
+        # `https://app.positron.local/x`. Custom scheme *registration*
+        # happens at WebView2 environment creation, which webview.dll owns
+        # — a virtual https host needs no registration and works for both
+        # navigation and subresources.
+        VHOST_SUFFIX = ".positron.local"
 
         # Positron is single-window by design: the subclassed WndProc and the
         # dispatch callbacks reach the adapter through this class variable.
@@ -108,10 +122,20 @@ module Positron
           if icon = config.icon
             apply_window_icon(icon)
           end
+
+          spawn apply_scheme_handlers_when_ready
         end
 
         def load_url(url : String)
-          LibWebview.navigate(@wv, url)
+          target = rewrite_scheme_url(url)
+          if target != url && !@schemes_applied
+            # A custom-scheme navigation before the WebResourceRequested
+            # filters are in place would escape to the network — hold it
+            # until apply_scheme_handlers_when_ready flushes it.
+            @pending_url = target
+          else
+            LibWebview.navigate(@wv, target)
+          end
         end
 
         def load_html(html : String, base_url : String? = nil)
@@ -190,12 +214,91 @@ module Positron
           @callback
         end
 
-        # Serve a custom URI scheme from the host process: not supported by
-        # the webview C API. Positron's embedded assets are inlined into the
-        # HTML, so examples are unaffected; a future implementation could
-        # use WebView2's SetVirtualHostNameToFolderMapping.
+        # Serve a custom URI scheme from the host process. The handler is
+        # stashed here and wired up once the WebView2 controller exists
+        # (webview.dll creates it asynchronously after `webview_create`);
+        # navigations to the scheme are held back until then. On Windows
+        # `app://…` is served from the virtual host
+        # `https://app.positron.local/…` — relative asset URLs keep
+        # working, absolute `app://` URLs inside frontend assets do not
+        # (custom scheme registration is impossible through webview.dll).
         def register_uri_scheme(scheme : String, &handler : String -> SchemeResponse?)
-          raise "register_uri_scheme is not supported by the Windows webview adapter"
+          @scheme_handlers[scheme] = handler
+        end
+
+        # --- custom scheme serving (virtual host interception) ---
+
+        # Runs as a fiber on the main thread: sleeps (yielding to the
+        # message pump) until webview.dll has created the WebView2
+        # controller, then installs the request interception and flushes
+        # any held-back navigation.
+        private def apply_scheme_handlers_when_ready : Nil
+          return if @scheme_handlers.empty? || @scheme_apply_started
+          @scheme_apply_started = true
+
+          controller = Pointer(Void).null
+          loop do
+            controller = LibWebview.get_native_handle(@wv, LibWebview::HANDLE_KIND_BROWSER_CONTROLLER)
+            break unless controller.null?
+            sleep 20.milliseconds
+          end
+
+          core = WebView2Com.core_webview2(controller)
+          env = core ? WebView2Com.environment(core) : nil
+          if core && env
+            @com_env = env
+            @scheme_handlers.each_key do |scheme|
+              WebView2Com.install(core, self, "https://#{scheme}#{VHOST_SUFFIX}/*")
+            end
+          else
+            Log.warn { "custom schemes unavailable: no ICoreWebView2/Environment" }
+          end
+          @schemes_applied = true
+
+          if url = @pending_url
+            @pending_url = nil
+            LibWebview.navigate(@wv, url)
+          end
+        end
+
+        # `app://rest` -> `https://app.positron.local/rest` for
+        # registered schemes; anything else passes through unchanged.
+        private def rewrite_scheme_url(url : String) : String
+          scheme = url.split(":", 2)[0]?
+          return url unless scheme && @scheme_handlers.has_key?(scheme)
+          rest = url.byte_slice(scheme.size + 1).lchop("//")
+          "https://#{scheme}#{VHOST_SUFFIX}/#{rest}"
+        end
+
+        # INVOKE_FN (UI thread, inside the message pump): map the virtual
+        # host back to a scheme, run the handler, answer the request.
+        protected def handle_webresource_request(args : Void*) : Nil
+          uri = WebView2Com.request_uri(args)
+          return unless uri
+
+          begin
+            parsed = URI.parse(uri)
+          rescue
+            return
+          end
+          host = parsed.host
+          return unless host && host.ends_with?(VHOST_SUFFIX)
+
+          scheme = host.byte_slice(0, host.bytesize - VHOST_SUFFIX.bytesize)
+          handler = @scheme_handlers[scheme]?
+          return unless handler
+
+          path = parsed.path.presence || "/"
+          path = "/#{path.lchop('/')}"
+          response = handler.call(path)
+          if response
+            WebView2Com.respond(args, @com_env, response.bytes,
+              response.mime_type, 200, "OK")
+          else
+            # Parity with the Linux adapter: not found = empty body.
+            WebView2Com.respond(args, @com_env, nil,
+              "text/plain; charset=utf-8", 200, "OK")
+          end
         end
 
         # --- Window management (WebViewPort) ---

@@ -26,20 +26,24 @@ Build orchestration lives in `crosspack.yml` (the [crosspack](https://rubygems.o
 gem, Ruby >= 3.2): `crosspack deps` verifies/installs the build-host
 dependencies, `crosspack build` runs specs + CLI + all examples and fans
 the binaries into `builds/<target>/`. On a Windows host `crosspack build`
-runs the `windows` matrix entry: same gate, but against the adapter stubs
-(the GTK/WebKitGTK host deps verify as satisfied — they are Linux-only).
-There is intentionally **no `package:` section** — Positron is a library, not an end product; packing
-belongs to applications. Keep the `version:` in `crosspack.yml` in sync
+runs the `windows` matrix entry with the real M5.2 adapters (the
+GTK/WebKitGTK host deps verify as satisfied — they are Linux-only).
+`crosspack pack` packages the built artifacts per the `package:` section:
+an MSI via WiX on Windows (`wix` from `dotnet tool install -g wix`),
+deb/rpm on Linux. Keep the `version:` in `crosspack.yml` in sync
 with `shard.yml`.
 
 All 8 examples must build cleanly and all specs must pass before a change
 is considered done.
 
 CI (`.github/workflows/ci.yml`) runs `crystal spec` and builds all examples
-on Ubuntu, macOS and Windows runners. Non-Linux jobs build against the
-adapter stubs; plugin factories gate platform requires by target flags so
-Linux C libraries never leak into non-Linux link lines. Platform-specific
-specs (unix sockets, SQLite FFI) are flag-gated.
+on Ubuntu, macOS and Windows runners. The Windows job builds the **real**
+M5.2 adapters (webview.dll is vendored in-repo; SQLite links the SDK's
+winsqlite3 import lib; secure_storage uses the OpenSSL DLLs bundled with
+Crystal). macOS jobs build against the adapter stubs; plugin factories
+gate platform requires by target flags so Linux C libraries never leak
+into non-Linux link lines. Platform-specific specs (unix sockets,
+SQLite FFI) are flag-gated.
 
 ## Requirements
 
@@ -125,10 +129,14 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 ## Known gaps (by design, not bugs)
 
-- Windows: `register_uri_scheme` and the devtools window API raise
-  (devtools are reachable via F12 when running with `POSITRON_DEV=1`).
-  Deep-link scheme *registration* (registry keys) is a packaging
-  concern on Windows, like `.desktop` on Linux.
+- Windows: custom URI schemes are served over a virtual https host
+  (`app://x` → `https://app.positron.local/x` via WebView2's
+  WebResourceRequested interception); absolute `app://` URLs inside
+  frontend assets do not resolve — use relative paths (the adapter
+  rewrites `load_url`). Devtools via the window API raise
+  (F12 works when running with `POSITRON_DEV=1`). Deep-link scheme
+  *registration* (registry keys) is a packaging concern on Windows,
+  like `.desktop` on Linux.
 - No macOS adapters yet (M5.1 in `ROADMAP.md`) — stubs only.
 - No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.

@@ -19,3 +19,7 @@
 
 # Compiled binaries (positron CLI, staged example binaries)
 /bin/
+
+# crosspack pack output and staging
+/crosspacks/
+/build/

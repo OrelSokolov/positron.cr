@@ -37,6 +37,20 @@ project adheres to [Semantic Versioning](https://semver.org/).
   under `%APPDATA%`, and the opt-in SQLite plugin linking the system
   `winsqlite3.dll`. The previously unix-gated specs (deep_links,
   secure_storage, sqlite) now run on win32 too.
+- `register_uri_scheme` on Windows: `app://x` is served from the host
+  process over the virtual host `https://app.positron.local/x` using
+  WebView2's WebResourceRequested interception (raw COM vtable calls
+  from the browser-controller handle `webview_get_native_handle`
+  exposes — see `adapters/windows/webview2_com.cr`). Navigations to
+  registered schemes are rewritten and held back until the interception
+  is installed; relative asset paths work as on Linux.
+- Distribution via crosspack: a `package:` section in `crosspack.yml`
+  — `crosspack pack` produces a WiX MSI on Windows (positron CLI +
+  examples + runtime DLLs under Program Files, Start Menu/Desktop
+  shortcuts) and deb/rpm payloads for Linux builds.
+- CI: the Windows runner now builds the real M5.2 adapters (webview.dll
+  vendored in-repo, winsqlite3 import lib from the SDK, OpenSSL DLLs
+  bundled with Crystal) instead of the stubs.
 - `crosspack build` on Windows fans `webview.dll` into the artifact tree.
 
 ### Changed
