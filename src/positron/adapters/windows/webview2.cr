@@ -212,7 +212,7 @@ module Positron
           monitor = Win32::LibUser32.MonitorFromWindow(@hwnd, Win32::MONITOR_DEFAULTTONEAREST)
           info = Win32::LibUser32::MonitorInfo.new
           info.cb_size = sizeof(Win32::LibUser32::MonitorInfo)
-          return unless Win32::LibUser32.GetMonitorInfoW(monitor, pointerof(info)) != 0
+          return unless Win32::LibUser32.GetMonitorInfoW(monitor, pointerof(info).as(Void*)) != 0
 
           wr = Win32::LibUser32::Rect.new
           Win32::LibUser32.GetWindowRect(@hwnd, pointerof(wr))
@@ -254,7 +254,7 @@ module Positron
           monitor = Win32::LibUser32.MonitorFromWindow(@hwnd, Win32::MONITOR_DEFAULTTONEAREST)
           info = Win32::LibUser32::MonitorInfo.new
           info.cb_size = sizeof(Win32::LibUser32::MonitorInfo)
-          return unless Win32::LibUser32.GetMonitorInfoW(monitor, pointerof(info)) != 0
+          return unless Win32::LibUser32.GetMonitorInfoW(monitor, pointerof(info).as(Void*)) != 0
 
           @fullscreen_style = style.to_u64!
           @fullscreen_rect = wr

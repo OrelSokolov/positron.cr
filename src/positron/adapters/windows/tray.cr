@@ -230,11 +230,16 @@ module Positron
           data
         end
 
+        # Static arrays are value types in Crystal: `data.value.sz_tip[i] = x`
+        # would mutate a throwaway copy. Mutate a local copy of the struct and
+        # write it back through the pointer.
         private def fill_tip(data : Win32::LibShell32::NotifyIconDataW*, tip : String)
           units = Win32.wstr(tip)
           limit = {units.size - 1, 127}.min
-          limit.times { |i| data.value.sz_tip[i] = units[i] }
-          data.value.sz_tip[limit] = 0
+          d = data.value
+          limit.times { |i| d.sz_tip[i] = units[i] }
+          d.sz_tip[limit] = 0
+          data.value = d
         end
 
         private def notify_add(tip : String) : Nil

@@ -41,7 +41,7 @@ module Positron::Plugins
       nil
     end
 
-    private def hex_byte(value : Int32) : String
+    private def hex_byte(value : Int64) : String
       value.to_s(16).rjust(2, '0').upcase
     end
 
@@ -74,10 +74,11 @@ module Positron::Plugins
       nil
     end
 
-    private def reg_get_dword(key : String, value : String) : Int32?
+    private def reg_get_dword(key : String, value : String) : Int64?
       raw = reg_query(key, value)
       return nil unless raw
-      raw.to_i32?(base: 16, prefix: true) || raw.to_i32?
+      # DWORDs may exceed Int32 (e.g. 0xff484a4c) — parse unsigned first.
+      raw.to_u32?(base: 16, prefix: true).try(&.to_i64!) || raw.to_i64?
     end
 
     private def reg_get_string(key : String, value : String) : String?

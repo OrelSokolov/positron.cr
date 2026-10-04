@@ -22,6 +22,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   the other examples now open real windows on Windows.
 - Windows theme adapter: dark/light + accent color from the registry
   (`reg query`), replacing the "not yet implemented" stub warning.
+- Windows M4 plugin adapters: clipboard (text/files/BMP images via
+  CF_UNICODETEXT/CF_HDROP/CF_DIB, GDI+ for image writing), dialogs
+  (MessageBoxW for alert/confirm, a native prompt window for input),
+  file_picker and save_file_dialog (comdlg32 Get{Open,Save}FileNameW),
+  notifications (Shell_NotifyIcon balloons with click-through), and
+  display info (EnumDisplayMonitors, GetDpiForMonitor, physical size in
+  mm). Verified headlessly: clipboard round-trip (UTF-8/Cyrillic),
+  monitor enumeration (resolution/scale/Hz/mm) and theme/accent.
 - `crosspack build` on Windows fans `webview.dll` into the artifact tree.
 
 ### Changed

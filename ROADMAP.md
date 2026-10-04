@@ -190,8 +190,12 @@ pure adapter job.
       WM_CLOSE→hide and `window.*` events); devtools: F12 in dev builds
       only (`open_devtools` raises).
 - [x] Theme plugin: dark/light + accent from the registry.
-- [ ] M4 plugin adapters on Windows (clipboard, dialogs, file_picker,
-      save_file_dialog, notifications, display, keyboard) — stubs remain.
+- [x] M4 plugin adapters on Windows: clipboard (CF_UNICODETEXT /
+      CF_HDROP / CF_DIB, images via GDI+), dialogs (MessageBoxW + a
+      hand-rolled prompt window), file_picker & save_file_dialog
+      (comdlg32), notifications (Shell_NotifyIcon balloons), display
+      (EnumDisplayMonitors + per-monitor DPI). The keyboard plugin has
+      no adapter — it is frontend-driven.
 
 **5.3 Cross-cutting**
 

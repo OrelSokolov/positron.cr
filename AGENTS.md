@@ -118,10 +118,8 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 ## Known gaps (by design, not bugs)
 
-- Windows: M4 plugin adapters (clipboard, dialogs, file_picker,
-  save_file_dialog, notifications, display, keyboard) are still stubs;
-  `register_uri_scheme` and the devtools window API raise (devtools are
-  reachable via F12 when running with `POSITRON_DEV=1`).
+- Windows: `register_uri_scheme` and the devtools window API raise
+  (devtools are reachable via F12 when running with `POSITRON_DEV=1`).
 - No macOS adapters yet (M5.1 in `ROADMAP.md`) — stubs only.
 - No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.
