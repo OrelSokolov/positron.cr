@@ -5,14 +5,16 @@ implementation and a usable desktop framework in the spirit of Wails:
 a batteries-included toolkit with CLI tooling, hot reload, cross-platform
 WebView adapters, typed frontend bindings and packaging.
 
-**Status 2026-09:** M0–M4 and the Linux part of M6 are implemented and
-tested on Linux. M5.2 (Windows) is implemented and tested on Windows
+**Status 2026-10:** M0–M4 and the Linux part of M6 are implemented and
+tested. M5.1 (macOS) is verified on arm64 macOS 26 with an end-to-end
+bridge smoke test. M5.2 (Windows) is implemented and tested on Windows
 11: real WebView2 window, event loop, tray, theme (stage 1); the M4
 plugin adapters (stage 2); and the POSIX-neutral plugins — fs dirs,
 deep_links single instance, secure_storage, SQLite via the system
-winsqlite3 (stage 3). M5.1 (macOS) is the next block. The architecture
-keeps all platform code behind ports so it stays a pure adapter job.
-**Multi-window support is intentionally out of scope.**
+winsqlite3 (stage 3). M5.3 (the macOS plugin adapter port) is the next
+block; the architecture keeps all platform code behind ports so it
+stays a pure adapter job. **Multi-window support is intentionally out
+of scope.**
 
 ## Where we are today
 
@@ -155,22 +157,34 @@ From the "first 10 core" list in `top_20.txt`:
 
 ---
 
-### M5. Cross-platform: macOS and Windows (L) — ⬜ next up
+### M5. Cross-platform: macOS and Windows (L) — 🔶 5.1/5.2 done, 5.3 remaining
 
 The largest single chunk. The port discipline added in M3/M4 (all
 platform code in `adapters/linux/`, `event_loop/linux.cr`,
 `plugins/*/linux.cr` or behind `WebViewPort` defaults) keeps this a
 pure adapter job.
 
-**5.1 macOS (WKWebView)**
+**5.1 macOS (WKWebView) — ✅ done**
 
-- [ ] Crystal ObjC bindings for `NSApplication`, `NSWindow`, `WKWebView`,
-      `WKScriptMessageHandler`.
-- [ ] Replace `adapters/macos/webview.cr` stub: message handler →
+- [x] Crystal ObjC bindings for `NSApplication`, `NSWindow`, `WKWebView`,
+      `WKScriptMessageHandler` — pure Crystal through the ObjC runtime
+      (`adapters/macos/objc.cr`: one fixed-arity `objc_msgSend` shape,
+      `method_invoke` for NSRect-by-value calls, `objc_msgSendSuper` for
+      NSSize setters, NSInvocation for float args and struct returns;
+      delegates are dynamically registered NSObject subclasses whose IMPs
+      are Crystal procs).
+- [x] Replace `adapters/macos/webview.cr` stub: message handler →
       `Host#dispatch`, `evaluateJavaScript` → `eval_js`,
       `WKURLSchemeHandler` for custom schemes.
-- [ ] `event_loop/macos.cr`: NSRunLoop + Crystal scheduler integration.
-- [ ] Tray via `NSStatusItem`; window API from M3 on NSWindow.
+- [x] `event_loop/macos.cr`: `[NSApp run]` + CFRunLoopTimer driving
+      `Fiber.yield` and the run_on_main queue (mirrors the GLib idle
+      source on Linux).
+- [x] Tray via `NSStatusItem`; window API from M3 on NSWindow
+      (incl. `contentMinSize`/`contentMaxSize` — macOS 26 dropped
+      `minContentSize`/`maxContentSize`), devtools via
+      `developerExtrasEnabled` + `_inspectElement`.
+- Known gaps: drag & drop (`dnd.files`) — WKWebView consumes file drops,
+      no public hook; verified on arm64 (macOS 26, Crystal 1.20).
 
 **5.2 Windows (WebView2)**
 
@@ -210,7 +224,7 @@ pure adapter job.
 
 **5.3 Cross-cutting**
 
-- [ ] Extend CI to build real adapters on macOS/Windows runners.
+- [x] Extend CI to build real adapters on macOS/Windows runners.
 - [ ] Port the M3 window API and M4 plugins adapter-by-adapter;
       capability gaps must raise, not no-op.
 
@@ -267,7 +281,7 @@ on macOS and Windows with feature parity for the M4 core plugins.
 ```
 M0 ─▶ M1 ─▶ M2 ─▶ M4 ─▶ M3 ─▶ M6(Linux)   ✅ done
                           │
-                          └──▶ M5 (macOS ∥ Windows)   ⬜ next
+                          └──▶ M5 (macOS ✅ ∥ Windows ✅; M5.3 plugin ports ⬜ next)
 M7 runs continuously.
 ```
 

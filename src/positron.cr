@@ -59,6 +59,7 @@ require "./positron/host"
 {% end %}
 
 {% if flag?(:darwin) && !flag?(:ios) %}
+  require "./positron/adapters/macos/objc"
   require "./positron/adapters/macos/webview"
   require "./positron/adapters/macos/tray"
   require "./positron/adapters/macos/icon"

@@ -9,11 +9,16 @@ runs in the OS WebView; Crystal owns all state and logic; the native
 shim (GTK/WebKitGTK on Linux) is a passive adapter. Assets embed at
 compile time into a single binary.
 
-Currently a **Linux-only reference implementation** of the Host-Shim
-pattern described in `positron-architecture.md`: macOS/Windows adapters
-are stubs (M5 in `ROADMAP.md`). `README.md` carries a status checklist
-(done vs missing) — keep it in sync with the actual state when features
-land.
+Currently a **Linux + macOS (arm64) + Windows reference implementation**
+of the Host-Shim pattern described in `positron-architecture.md`: Linux
+uses GTK/WebKitGTK, macOS uses WKWebView/NSWindow/NSStatusItem through a
+pure-Crystal Objective-C runtime layer (`adapters/macos/objc.cr` — see the
+header comment there for the dispatch-strategy constraints of Crystal's
+one-declaration-per-C-symbol rule), Windows uses WebView2 via the
+vendored `webview.dll` (`adapters/windows/`). Only the macOS plugin
+adapters (clipboard etc.) are still stubs (M5.3 in `ROADMAP.md`).
+`README.md` carries a status checklist (done vs missing) — keep it in sync
+with the actual state when features land.
 
 ## Build & Test
 
@@ -46,13 +51,15 @@ All 8 examples must build cleanly and all specs must pass before a change
 is considered done.
 
 CI (`.github/workflows/ci.yml`) runs `crystal spec` and builds all examples
-on Ubuntu, macOS and Windows runners. The Windows job builds the **real**
-M5.2 adapters (webview.dll is vendored in-repo; SQLite links the SDK's
-winsqlite3 import lib; secure_storage uses the OpenSSL DLLs bundled with
-Crystal). macOS jobs build against the adapter stubs; plugin factories
-gate platform requires by target flags so Linux C libraries never leak
-into non-Linux link lines. Platform-specific specs (unix sockets,
-SQLite FFI) are flag-gated.
+on Ubuntu, macOS and Windows runners. The macOS job builds the **real**
+WKWebView/NSStatusItem adapters (pure-Crystal ObjC runtime layer, system
+frameworks — no extra installs beyond `openssl@3` for secure_storage); the
+Windows job builds the **real** M5.2 adapters (webview.dll is vendored
+in-repo; SQLite links the SDK's winsqlite3 import lib; secure_storage
+uses the OpenSSL DLLs bundled with Crystal). Plugin factories gate
+platform requires by target flags so Linux C libraries never leak into
+non-Linux link lines. Platform-specific specs (unix sockets, SQLite FFI)
+are flag-gated.
 
 ## Requirements
 
@@ -60,6 +67,10 @@ SQLite FFI) are flag-gated.
 - Linux: GTK 3, WebKitGTK 4.1, Ayatana AppIndicator 3 dev files,
   libnotify (notifications plugin), libsqlite3 dev files (opt-in SQLite
   plugin), rsvg-convert or ImageMagick + appimagetool (packaging)
+- macOS: Xcode command line tools; the adapters use the system
+  AppKit/WebKit frameworks through the pure-Crystal ObjC runtime layer
+  (no bindings shard). secure_storage needs OpenSSL
+  (`brew install openssl@3`)
 - Windows: the Microsoft Edge WebView2 runtime (preinstalled on Win10/11)
   and the vendored `third_party/webview/webview.dll` (shipped next to the
   exe by `crosspack build`); Win10+ for the deep-links AF_UNIX handshake;
@@ -84,8 +95,14 @@ src/positron/
   packaging.cr          # .desktop / icons / AppDir / deb helpers
   cli.cr                # positron init/dev/build/doctor/package
   event_loop/linux.cr   # GTK main loop + Crystal fiber integration
+  event_loop/macos.cr   # NSApp run loop + CFRunLoopTimer fiber tick
+  event_loop/windows.cr # Win32 message pump + WM_TIMER fiber tick
   adapters/linux/       # WebKitGTK (window API, devtools, drag&drop),
                         # AppIndicator, icon
+  adapters/macos/       # WKWebView/NSWindow/NSStatusItem + the pure-
+                        # Crystal ObjC runtime layer (objc.cr)
+  adapters/windows/     # WebView2 via vendored webview.dll, Win32,
+                        # tray, WebResourceRequested COM interception
   plugins/              # clipboard, deep_links, dialogs, display,
                         # file_picker, filesystem, keyboard, lifecycle,
                         # logger, notifications, permissions,
@@ -97,21 +114,34 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 ## Conventions
 
-- **Linux is the reference platform; Windows is functional** (M5.2
-  stage 1: WebView2 window + JS bridge + event loop + tray + theme via
-  the vendored `third_party/webview/webview.dll`, loaded at runtime —
-  keep the DLL next to the exe or under `third_party/webview/`;
-  stage 2: clipboard, dialogs, file picker, save dialog, notifications,
-  display, preferences adapters; stage 3: POSIX-neutral plugins fixed —
-  fs dirs (`APPDATA`/`LOCALAPPDATA`), deep_links single instance over
-  AF_UNIX, secure_storage under `%APPDATA%`, SQLite via the system
+- **Linux, macOS (arm64) and Windows are the working platforms.** Linux
+  is the reference platform. macOS: real WKWebView/NSWindow/NSStatusItem
+  adapters (M5.1) — the macOS *plugin* adapters (clipboard, dialogs, …)
+  are stubs (M5.3), do not assume they work. Windows (M5.2 stage 1:
+  WebView2 window + JS bridge + event loop + tray + theme via the
+  vendored `third_party/webview/webview.dll`, loaded at runtime — keep
+  the DLL next to the exe or under `third_party/webview/`; stage 2:
+  clipboard, dialogs, file picker, save dialog, notifications, display,
+  preferences adapters; stage 3: POSIX-neutral plugins fixed — fs dirs
+  (`APPDATA`/`LOCALAPPDATA`), deep_links single instance over AF_UNIX,
+  secure_storage under `%APPDATA%`, SQLite via the system
   `winsqlite3.dll`).
-  macOS adapters remain stubs — do not assume they work.
-- **Platform code stays behind ports.** Any GTK/WebKit/native call
-  belongs in `src/positron/adapters/linux/`,
-  `src/positron/event_loop/linux.cr` or `src/positron/plugins/*/linux.cr`.
-  Core files must stay platform-pure — the macOS/Windows port (M5 in
-  `ROADMAP.md`) depends on that.
+- **Platform code stays behind ports.** Any GTK/WebKit call belongs in
+  `src/positron/adapters/linux/`, `src/positron/event_loop/linux.cr` or
+  `src/positron/plugins/*/linux.cr`. Any AppKit/WebKit/ObjC call belongs
+  in `src/positron/adapters/macos/`, `src/positron/event_loop/macos.cr`
+  or `src/positron/plugins/*/macos.cr`. Any Win32/WebView2 call belongs
+  in `src/positron/adapters/windows/`,
+  `src/positron/event_loop/windows.cr` or
+  `src/positron/plugins/*/windows.cr`. Core files must stay
+  platform-pure — future ports (M5.3, mobile) depend on that.
+- macOS ObjC bindings rules (`adapters/macos/objc.cr`): Crystal allows one
+  `fun` declaration per C symbol program-wide, so there is exactly one
+  fixed-arity `objc_msgSend` shape — go through `ObjC.send*` helpers,
+  `ObjC.invoke_rect3` (NSRect-by-value), `ObjC.send_size` (NSSize-by-value)
+  or `ObjC::Call` (NSInvocation: float args, 4+ args, struct returns).
+  Never hand-roll another `objc_msgSend` declaration. NSInvocation cannot
+  pass HFA struct *arguments* on arm64 — keep that in mind for new calls.
 - Plugins expose a `manifest` (for JS facade / TypeScript bindings
   generation) and a `bind` method (for command registration). Both must
   stay in sync.
@@ -146,7 +176,9 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   (F12 works when running with `POSITRON_DEV=1`). Deep-link scheme
   *registration* (registry keys) is a packaging concern on Windows,
   like `.desktop` on Linux.
-- No macOS adapters yet (M5.1 in `ROADMAP.md`) — stubs only.
+- macOS plugin adapters (clipboard, dialogs, notifications, …) are
+  stubs — port with M5.3. No `dnd.files` on macOS: WKWebView consumes
+  file drops with no public hook.
 - No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.
 - Many Tier-2+ plugins from `plugins.txt` are not yet implemented.

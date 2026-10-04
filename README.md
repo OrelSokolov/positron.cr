@@ -28,9 +28,9 @@ end
 - **Single binary:** assets are embedded at compile time; no runtime deps
   beyond the OS WebView.
 - **Cross-platform by design:** all platform code sits behind ports and
-  adapters. **Linux (WebKitGTK) is fully working today**; macOS (WKWebView)
-  and Windows (WebView2) adapters are the next milestone — see the checklist
-  below and `ROADMAP.md`.
+  adapters. **Linux (WebKitGTK), macOS (WKWebView) and Windows (WebView2)
+  are fully working today** — only the macOS plugin adapters are stubs;
+  see the checklist below and `ROADMAP.md`.
 
 This repository contains the reference implementation of the
 **Positron Host-Shim Pattern** described in `positron-architecture.md`.
@@ -57,14 +57,20 @@ What is already there ✔ and what is still needed ☐:
       always-on-top/min-max, window events in JS)
 - [x] `positron` CLI: `init` / `dev` / `build` / `doctor` / `package`
 - [x] Packaging: `.desktop` entries, hicolor icons, AppDir/AppImage, deb
-- [x] Headless test suite (48+ specs)
-- [ ] macOS adapter (WKWebView + NSStatusBar) — stub only
-- [ ] Windows adapter (WebView2 + NotifyIcon) — stub only
-- [ ] CI builds of real macOS/Windows adapters
-- [ ] macOS (.app/dmg) and Windows (NSIS) packaging templates
+- [x] Headless test suite (53 specs)
+- [x] macOS adapter (WKWebView + NSWindow, NSStatusBar tray, NSApp event
+      loop) via a pure-Crystal Objective-C runtime layer
+      (`adapters/macos/objc.cr`) — no bindings shard needed
+- [x] Windows adapter (M5.2): WebView2 window + JS bridge + event loop +
+      tray + theme via the vendored `webview.dll`, the M4 plugin
+      adapters and the POSIX-neutral plugins (fs dirs, deep_links over
+      AF_UNIX, secure_storage, SQLite via the system winsqlite3) — see
+      `CHANGELOG.md` for details
+- [ ] macOS plugin adapter ports (clipboard, dialogs, …) — M5.3
+- [ ] macOS (.app/dmg) packaging templates
 - [ ] Documentation site / `docs/` tree, shard publishing, tagged releases
 
-### Plugins (Linux unless noted)
+### Plugins (Linux + Windows; macOS adapters still stubs — port with M5.3)
 
 - [x] Clipboard (text / image / files)
 - [x] Window control from JS
@@ -83,7 +89,7 @@ What is already there ✔ and what is still needed ☐:
 - [ ] Share sheet, badges, taskbar progress, global hotkeys, system sounds
 - [ ] Media & hardware plugins (camera, microphone, audio/video player,
       geolocation, sensors, biometrics) — Tier 2+ in `plugins.txt`
-- [ ] Plugin ports to macOS / Windows (adapter-by-adapter with M5)
+- [ ] Plugin ports to macOS (adapter-by-adapter with M5.3)
 
 ### Mobile (non-goal for now)
 
@@ -92,26 +98,27 @@ What is already there ✔ and what is still needed ☐:
 
 ## Platform support matrix
 
-Current status per platform: **Linux is fully working**, macOS and Windows
-adapters exist as compile-only stubs (M5 in `ROADMAP.md`; CI builds them to
-keep the ports honest). Legend: ✅ works · 🔶 stub (compiles, no
-implementation) · ❌ not implemented (planned).
+Current status per platform: **Linux, macOS and Windows are working**;
+on macOS only the plugin adapters (clipboard, dialogs, …) are stubs —
+they port with M5.3 in `ROADMAP.md`. Legend: ✅ works · 🔶 stub
+(compiles, no implementation) · ❌ not implemented (planned).
 
 | Feature | Linux | macOS | Windows |
 |---|:---:|:---:|:---:|
 | **Core (host, EventBus, commands, plugins, StateManager)** — platform-pure | ✅ | ✅ | ✅ |
 | **JS facade + TS bindings generation** — platform-pure | ✅ | ✅ | ✅ |
 | **`positron` CLI (init/build/doctor)** | ✅ | ✅ | ✅ |
-| WebView surface | ✅ WebKitGTK 4.1 | 🔶 WKWebView stub | 🔶 WebView2 stub |
-| Event loop | ✅ GTK + fibers | 🔶 NSRunLoop stub | 🔶 Win32 stub |
-| System tray | ✅ AppIndicator | 🔶 NSStatusItem stub | 🔶 Shell_NotifyIcon stub |
-| Window management API (M3) | ✅ | ❌ | ❌ |
-| Custom URI schemes + embedded assets serving | ✅ | ❌ | ❌ |
-| Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ❌ | ❌ |
-| Devtools, drag & drop (`dnd.files`) | ✅ | ❌ | ❌ |
-| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ❌ (port with M5) | ❌ (port with M5) |
-| Packaging | ✅ .desktop / AppImage / deb | ❌ .app/dmg after M5 | ❌ NSIS after M5 |
-| `positron package` | ✅ | ❌ | ❌ |
+| WebView surface | ✅ WebKitGTK 4.1 | ✅ WKWebView | ✅ WebView2 (vendored `webview.dll`) |
+| Event loop | ✅ GTK + fibers | ✅ NSApp run loop + fibers | ✅ Win32 message pump + fibers |
+| System tray | ✅ AppIndicator | ✅ NSStatusItem | ✅ Shell_NotifyIcon |
+| Window management API (M3) | ✅ | ✅ | ✅ |
+| Custom URI schemes + embedded assets serving | ✅ | ✅ | ✅ (virtual https host; absolute `app://` URLs in assets unsupported) |
+| Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ✅ | ✅ |
+| Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) |
+| Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ❌ (port with M5.3) | ✅ |
+| Packaging | ✅ .desktop / AppImage / deb | ❌ .app/dmg after M5 | ✅ MSI via `crosspack pack` |
+| `positron package` | ✅ | ❌ | ❌ (use `crosspack pack`) |
 
 ## Philosophy
 
@@ -135,6 +142,7 @@ implementation) · ❌ not implemented (planned).
 | Desktop Host | `src/positron/desktop_host.cr` | Wires WebView, tray, commands, EventBus |
 | Mobile Host | `src/positron/mobile_host.cr` | Base for Android/iOS host integration |
 | Linux EventLoop | `src/positron/event_loop/linux.cr` | GTK main loop + Crystal fiber idle source |
+| macOS EventLoop | `src/positron/event_loop/macos.cr` | `[NSApp run]` + CFRunLoopTimer fiber tick |
 | Dev Asset Server | `src/positron/dev/asset_server.cr` | Serve frontend from disk + live reload |
 | TS Bindings | `src/positron/bindings_generator.cr` | Typed `positron.d.ts` from manifests |
 | CLI | `src/positron/cli.cr` | `positron init/dev/build/doctor/package` |
@@ -150,8 +158,10 @@ implementation) · ❌ not implemented (planned).
 | SQLite Plugin | `src/positron/plugins/sqlite/` | Direct FFI to libsqlite3 (opt-in require) |
 | WebView Adapter | `src/positron/adapters/linux/webkit_gtk.cr` | WebKitGTK 4.1, window API, devtools, drag&drop |
 | Tray Adapter | `src/positron/adapters/linux/app_indicator_tray.cr` | Ayatana AppIndicator |
-| Windows Adapters (stub) | `src/positron/adapters/windows/` | WebView2 + NotifyIcon placeholders |
-| macOS Adapters (stub) | `src/positron/adapters/macos/` | WKWebView + StatusBar placeholders |
+| Windows Adapters | `src/positron/adapters/windows/` | WebView2 via vendored `webview.dll`, Win32 tray, COM interception |
+| macOS ObjC Layer | `src/positron/adapters/macos/objc.cr` | Pure-Crystal Objective-C runtime bindings |
+| macOS WebView Adapter | `src/positron/adapters/macos/webview.cr` | WKWebView + NSWindow, bridge, URI schemes |
+| macOS Tray Adapter | `src/positron/adapters/macos/tray.cr` | NSStatusBar / NSStatusItem |
 | Android Host (stub) | `src/positron/adapters/android/host.cr` | Mobile host placeholder |
 | iOS Host (stub) | `src/positron/adapters/ios/host.cr` | Mobile host placeholder |
 
@@ -255,13 +265,14 @@ src/
         app_indicator_tray.cr
         icon.cr
         factory.cr
-      windows/                           # Windows shims (stub)
-        webview2.cr
+      macos/                             # macOS shims (WKWebView/NSWindow;
+        objc.cr                          #   objc.cr is the ObjC runtime layer)
+        webview.cr
         tray.cr
         icon.cr
         factory.cr
-      macos/                             # macOS shims (stub)
-        webview.cr
+      windows/                           # Windows shims (WebView2 via
+        webview2.cr                      #   the vendored webview.dll)
         tray.cr
         icon.cr
         factory.cr

@@ -50,8 +50,36 @@ project adheres to [Semantic Versioning](https://semver.org/).
   shortcuts) and deb/rpm payloads for Linux builds.
 - CI: the Windows runner now builds the real M5.2 adapters (webview.dll
   vendored in-repo, winsqlite3 import lib from the SDK, OpenSSL DLLs
-  bundled with Crystal) instead of the stubs.
+  bundled with Crystal) and the macOS runner builds the real
+  WKWebView/NSStatusItem adapters, instead of the stubs.
 - `crosspack build` on Windows fans `webview.dll` into the artifact tree.
+- **macOS tray adapter rewritten to follow the reference implementation**
+  in OrelSokolov/systray (`systray_darwin.m`, a getlantern/systray fork):
+  the status item is explicitly `setVisible:` after creation (a
+  user-⌘-drag-hidden item stays hidden otherwise), the item and its menu
+  are retained (the event loop's per-tick autorelease pool drain would
+  otherwise release the autoreleased item), icons are normalized to
+  16×16 via `setSize:` (SVG sources keep their natural size, e.g.
+  128×128, without it) and the button's `imagePosition` is kept explicit
+  (NSImageOnly / NSImageLeft / NSNoImage) instead of relying on AppKit's
+  default. Verified programmatically: visible item, 16×16 icon, correct
+  imagePosition, 3-entry menu (item + separator + checkable).
+- **macOS adapters (M5.1):** real WKWebView/NSWindow WebViewPort, NSStatusItem
+  tray and NSApp event loop on top of a pure-Crystal Objective-C runtime
+  layer (`src/positron/adapters/macos/objc.cr`) — no bindings shard. The
+  layer works around Crystal's one-declaration-per-C-symbol rule with one
+  fixed-arity `objc_msgSend` shape plus `method_invoke` (NSRect-by-value
+  args), `objc_msgSendSuper` (NSSize args) and NSInvocation (float args,
+  4+ args, struct returns). Bridge shim injected as a WKUserScript,
+  messages received via a dynamically registered WKScriptMessageHandler,
+  custom URI schemes via WKURLSchemeHandler, full M3 window API on
+  NSWindow (`contentMinSize`/`contentMaxSize` — macOS 26 dropped
+  `minContentSize`/`maxContentSize`), devtools via `developerExtrasEnabled`
+  + `_inspectElement`, tray menus with checkable items/submenus, and a
+  CFRunLoopTimer fiber tick mirroring the Linux GLib idle source.
+  Verified on arm64 macOS 26 (all 8 examples build, 53 specs green,
+  end-to-end JS bridge smoke test through `app://`). Known gap: no
+  `dnd.files` — WKWebView consumes file drops with no public hook.
 
 ### Changed
 

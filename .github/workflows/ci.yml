@@ -22,9 +22,10 @@ jobs:
       fail-fast: false
       matrix:
         # Linux is the fully supported platform (real GTK/WebKitGTK
-        # adapters); Windows builds the real M5.2 adapters (WebView2 via
-        # the vendored webview.dll, SQLite via the SDK winsqlite3 import
-        # lib). macOS builds against the adapter stubs.
+        # adapters); macOS builds the real WKWebView/NSStatusItem
+        # adapters (pure-Crystal ObjC runtime layer) and Windows builds
+        # the real M5.2 adapters (WebView2 via the vendored webview.dll,
+        # SQLite via the SDK winsqlite3 import lib).
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
@@ -43,8 +44,9 @@ jobs:
       # Unix-gated plugins link native libraries on macOS too:
       # secure_storage links OpenSSL (brew's keg-only openssl@3 needs an
       # explicit PKG_CONFIG_PATH), the SQLite spec links the system
-      # libsqlite3. GTK/WebKitGTK are NOT needed: macOS builds against
-      # the adapter stubs until M5 lands.
+      # libsqlite3. The macOS adapters themselves need nothing extra:
+      # they talk to AppKit/WebKit through the pure-Crystal ObjC runtime
+      # layer (system frameworks, no Homebrew packages).
       - name: Install native dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
