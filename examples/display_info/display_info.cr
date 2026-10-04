@@ -1,15 +1,15 @@
-require "../../src/crystal_ui"
+require "../../src/positron"
 
 # Demo application for the Display plugin.
 #
 # Queries the OS for screen information (DPI, resolution, monitors,
 # orientation) and renders it in the WebView.
-class DisplayInfoApp < CrystalUI::Application
+class DisplayInfoApp < Positron::Application
   embed_application_files(__DIR__, "../../assets/crystal-icon")
 
   def configure_plugins
-    use CrystalUI::Plugins::Display
-    use CrystalUI::Plugins::Logger
+    use Positron::Plugins::Display
+    use Positron::Plugins::Logger
   end
 
   def register_commands(registry)
@@ -17,8 +17,8 @@ class DisplayInfoApp < CrystalUI::Application
   end
 
   def on_ready
-    webview.create(CrystalUI::WebViewConfig.new(
-      title: "CrystalUI Display Info",
+    webview.create(Positron::WebViewConfig.new(
+      title: "Positron Display Info",
       width: 900,
       height: 700,
       icon: icon_source(:svg)
@@ -34,8 +34,8 @@ class DisplayInfoApp < CrystalUI::Application
 
     tray.set_icon(icon_source(:svg))
     tray.set_title("Display Info")
-    tray.add_or_update_item(CrystalUI::TrayItem.new(id: 1, title: "Open"))
-    tray.add_or_update_item(CrystalUI::TrayItem.new(id: 2, title: "Quit"))
+    tray.add_or_update_item(Positron::TrayItem.new(id: 1, title: "Open"))
+    tray.add_or_update_item(Positron::TrayItem.new(id: 2, title: "Quit"))
     tray.on_item_click do |id|
       case id
       when 1 then webview.show
@@ -45,7 +45,7 @@ class DisplayInfoApp < CrystalUI::Application
     tray.show
   end
 
-  @[CrystalUI::Command]
+  @[Positron::Command]
   def ping : String
     "pong"
   end

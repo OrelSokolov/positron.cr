@@ -83,12 +83,12 @@ jobs:
           done
 
           # The CLI links no GUI stack — must build on every runner.
-          echo "::group::Build crystal-ui CLI"
+          echo "::group::Build positron CLI"
           mkdir -p bin
-          if crystal build src/crystal_ui/cli.cr -o bin/crystal-ui --no-color; then
-            echo "crystal-ui: OK"
+          if crystal build src/positron/cli.cr -o bin/positron --no-color; then
+            echo "positron: OK"
           else
-            echo "crystal-ui: FAILED"
+            echo "positron: FAILED"
             status=1
           fi
           echo "::endgroup::"

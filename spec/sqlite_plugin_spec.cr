@@ -1,26 +1,26 @@
 {% if flag?(:unix) %}
   # The SQLite plugin binds libsqlite3 directly; it is an opt-in require
-  # (`require "crystal_ui/plugins/sqlite/plugin"`) so applications without
+  # (`require "positron/plugins/sqlite/plugin"`) so applications without
   # a local database do not link it. This spec runs where the C library is
   # available (Linux/macOS CI runners).
-  require "../src/crystal_ui"
-  require "../src/crystal_ui/plugins/sqlite/plugin"
+  require "../src/positron"
+  require "../src/positron/plugins/sqlite/plugin"
   require "spec"
   require "json"
   require "file_utils"
 
-  describe CrystalUI::Plugins::Sqlite do
+  describe Positron::Plugins::Sqlite do
     it "creates tables, inserts, and queries with bound parameters" do
-      dir = File.join(Dir.tempdir, "crystalui-sqlite-spec-#{Random::Secure.hex(6)}")
+      dir = File.join(Dir.tempdir, "positron-sqlite-spec-#{Random::Secure.hex(6)}")
       db_path = File.join(dir, "test.db")
 
-      plugin = CrystalUI::Plugins::Sqlite.new(app_id: "specapp", path: db_path)
-      registry = CrystalUI::CommandRegistry.new
-      state = CrystalUI::StateManager.new
+      plugin = Positron::Plugins::Sqlite.new(app_id: "specapp", path: db_path)
+      registry = Positron::CommandRegistry.new
+      state = Positron::StateManager.new
       plugin.bind(registry, state)
 
       request = ->(name : String, args : String) do
-        registry.dispatch(CrystalUI::CommandRequest.new(
+        registry.dispatch(Positron::CommandRequest.new(
           id: "spec", name: name, args: JSON.parse(args)))
       end
 
@@ -57,7 +57,7 @@
   end
 {% else %}
   # Windows runners have no libsqlite3 in the default toolchain; skipped.
-  describe "CrystalUI::Plugins::Sqlite (skipped on this platform)" do
+  describe "Positron::Plugins::Sqlite (skipped on this platform)" do
     it "is not built here" do
       true.should be_true
     end

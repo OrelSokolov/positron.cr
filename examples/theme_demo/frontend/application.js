@@ -3,7 +3,7 @@ async function refreshTheme() {
   result.innerHTML = '<pre>Reading system theme...</pre>';
 
   try {
-    const info = await CrystalUI.theme.get_info();
+    const info = await Positron.theme.get_info();
     document.body.setAttribute('data-theme', info.mode);
 
     const lines = [

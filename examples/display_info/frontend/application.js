@@ -89,7 +89,7 @@ function renderInfo(info) {
 async function refreshInfo() {
   setStatus('Reading display information...');
   try {
-    const info = await CrystalUI.display.get_info();
+    const info = await Positron.display.get_info();
     renderInfo(info);
     setStatus('Display information updated');
   } catch (err) {

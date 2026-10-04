@@ -17,5 +17,5 @@
 # crosspack build output tree
 /builds/
 
-# Compiled binaries (crystal-ui CLI, staged example binaries)
+# Compiled binaries (positron CLI, staged example binaries)
 /bin/

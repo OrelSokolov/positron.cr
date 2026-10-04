@@ -1,4 +1,4 @@
-# CrystalUI — Top 20 Absolutely Universal Plugins
+# Positron — Top 20 Absolutely Universal Plugins
 # Platforms: U = Universal (Linux, macOS, Windows, Android, iOS)
 # Theme / Appearance is intentionally excluded: UI is fully custom JS/HTML/CSS inside WebView.
 

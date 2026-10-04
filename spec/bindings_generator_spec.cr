@@ -1,18 +1,18 @@
-require "../src/crystal_ui/command_registry"
-require "../src/crystal_ui/state_manager"
-require "../src/crystal_ui/plugin"
-require "../src/crystal_ui/js_facade_generator"
-require "../src/crystal_ui/bindings_generator"
-require "../src/crystal_ui/dev/asset_server"
-require "../src/crystal_ui/ports/webview_port"
-require "../src/crystal_ui/ports/tray_port"
-require "../src/crystal_ui/host"
-require "../src/crystal_ui/application"
+require "../src/positron/command_registry"
+require "../src/positron/state_manager"
+require "../src/positron/plugin"
+require "../src/positron/js_facade_generator"
+require "../src/positron/bindings_generator"
+require "../src/positron/dev/asset_server"
+require "../src/positron/ports/webview_port"
+require "../src/positron/ports/tray_port"
+require "../src/positron/host"
+require "../src/positron/application"
 require "spec"
 require "json"
 
 # Plugin with a manifest for bindings generation tests.
-class BindingsPlugin < CrystalUI::Plugin
+class BindingsPlugin < Positron::Plugin
   def name : String
     "fs"
   end
@@ -21,19 +21,19 @@ class BindingsPlugin < CrystalUI::Plugin
     [:desktop]
   end
 
-  def manifest : Hash(String, CrystalUI::CommandManifest)
+  def manifest : Hash(String, Positron::CommandManifest)
     {
-      "fs.read" => CrystalUI::CommandManifest.new(
+      "fs.read" => Positron::CommandManifest.new(
         name: "fs.read",
-        args: [CrystalUI::ArgumentManifest.new(name: "path", type: "String")],
+        args: [Positron::ArgumentManifest.new(name: "path", type: "String")],
         returns: "String",
       ),
-      "fs.write" => CrystalUI::CommandManifest.new(
+      "fs.write" => Positron::CommandManifest.new(
         name: "fs.write",
         args: [
-          CrystalUI::ArgumentManifest.new(name: "path", type: "String"),
-          CrystalUI::ArgumentManifest.new(name: "size", type: "Int32"),
-          CrystalUI::ArgumentManifest.new(name: "force", type: "Bool"),
+          Positron::ArgumentManifest.new(name: "path", type: "String"),
+          Positron::ArgumentManifest.new(name: "size", type: "Int32"),
+          Positron::ArgumentManifest.new(name: "force", type: "Bool"),
         ],
         returns: "Bool",
       ),
@@ -42,7 +42,7 @@ class BindingsPlugin < CrystalUI::Plugin
 end
 
 # Application with @[Command] methods exercising the macro-generated manifest.
-class BindingsApp < CrystalUI::Application
+class BindingsApp < Positron::Application
   def on_ready; end
 
   def application_html : String
@@ -53,32 +53,32 @@ class BindingsApp < CrystalUI::Application
     command_registry
   end
 
-  @[CrystalUI::Command]
+  @[Positron::Command]
   def greet : String
     "hi"
   end
 
-  @[CrystalUI::Command]
+  @[Positron::Command]
   def ping : Bool
     true
   end
 end
 
-describe CrystalUI::BindingsGenerator do
+describe Positron::BindingsGenerator do
   it "maps Crystal types to TypeScript" do
-    CrystalUI::BindingsGenerator.crystal_type_to_ts("String").should eq("string")
-    CrystalUI::BindingsGenerator.crystal_type_to_ts("Int32").should eq("number")
-    CrystalUI::BindingsGenerator.crystal_type_to_ts("Float64").should eq("number")
-    CrystalUI::BindingsGenerator.crystal_type_to_ts("Bool").should eq("boolean")
-    CrystalUI::BindingsGenerator.crystal_type_to_ts(nil).should eq("any")
-    CrystalUI::BindingsGenerator.crystal_type_to_ts("JSON::Any").should eq("any")
+    Positron::BindingsGenerator.crystal_type_to_ts("String").should eq("string")
+    Positron::BindingsGenerator.crystal_type_to_ts("Int32").should eq("number")
+    Positron::BindingsGenerator.crystal_type_to_ts("Float64").should eq("number")
+    Positron::BindingsGenerator.crystal_type_to_ts("Bool").should eq("boolean")
+    Positron::BindingsGenerator.crystal_type_to_ts(nil).should eq("any")
+    Positron::BindingsGenerator.crystal_type_to_ts("JSON::Any").should eq("any")
   end
 
   it "generates typed plugin namespaces" do
-    ts = CrystalUI::BindingsGenerator.new(
-      [BindingsPlugin.new] of CrystalUI::Plugin).typescript
+    ts = Positron::BindingsGenerator.new(
+      [BindingsPlugin.new] of Positron::Plugin).typescript
 
-    ts.should contain("declare namespace CrystalUI")
+    ts.should contain("declare namespace Positron")
     ts.should contain("function call(name: string")
     ts.should contain("namespace fs {")
     ts.should contain("function read(args: { path: string }): Promise<string>;")
@@ -89,9 +89,9 @@ describe CrystalUI::BindingsGenerator do
     app = BindingsApp.new
     # Command manifests are populated when commands are registered —
     # in a real app this happens before on_ready/serve_directory.
-    app.register_commands(CrystalUI::CommandRegistry.new)
+    app.register_commands(Positron::CommandRegistry.new)
 
-    ts = CrystalUI::BindingsGenerator.new([] of CrystalUI::Plugin, app).typescript
+    ts = Positron::BindingsGenerator.new([] of Positron::Plugin, app).typescript
 
     ts.should contain("function greet(args?: Record<string, any>): Promise<any>;")
     ts.should contain("function ping(args?: Record<string, any>): Promise<any>;")
@@ -99,7 +99,7 @@ describe CrystalUI::BindingsGenerator do
 
   it "produces the same manifests the macro registers as commands" do
     app = BindingsApp.new
-    registry = CrystalUI::CommandRegistry.new
+    registry = Positron::CommandRegistry.new
     app.register_commands(registry)
 
     manifests = app.command_manifests

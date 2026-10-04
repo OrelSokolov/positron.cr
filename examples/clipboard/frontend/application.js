@@ -11,7 +11,7 @@ function setStatus(message) {
 async function pasteText() {
   setStatus('Reading text from clipboard...');
   try {
-    const text = await CrystalUI.clipboard.read_text();
+    const text = await Positron.clipboard.read_text();
     textInput.value = text || '';
     setStatus(text == null ? 'Clipboard does not contain text' : 'Text pasted');
   } catch (err) {
@@ -22,7 +22,7 @@ async function pasteText() {
 async function pasteImage() {
   setStatus('Reading image from clipboard...');
   try {
-    const uri = await CrystalUI.clipboard.read_image();
+    const uri = await Positron.clipboard.read_image();
     if (uri) {
       imageThumb.src = uri;
       imageThumb.style.display = 'block';
@@ -41,7 +41,7 @@ async function pasteImage() {
 async function pasteFiles() {
   setStatus('Reading files from clipboard...');
   try {
-    const files = await CrystalUI.clipboard.read_files();
+    const files = await Positron.clipboard.read_files();
     fileList.innerHTML = '';
     if (files.length === 0) {
       setStatus('Clipboard does not contain files');

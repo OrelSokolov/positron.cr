@@ -92,7 +92,7 @@ function highlightShortcut(id) {
 
 async function registerShortcuts() {
   // Register by physical key code so shortcuts work regardless of layout.
-  await CrystalUI.keyboard.register_shortcut({
+  await Positron.keyboard.register_shortcut({
     id: 'select_all',
     key: '',
     code: 'KeyA',
@@ -103,7 +103,7 @@ async function registerShortcuts() {
     prevent_default: true
   });
 
-  await CrystalUI.keyboard.register_shortcut({
+  await Positron.keyboard.register_shortcut({
     id: 'bold',
     key: '',
     code: 'KeyB',
@@ -116,17 +116,17 @@ async function registerShortcuts() {
 }
 
 async function clearEvents() {
-  await CrystalUI.keyboard.clear_events();
+  await Positron.keyboard.clear_events();
   renderEvents([]);
 }
 
 async function loadEvents() {
-  const events = await CrystalUI.keyboard.get_events();
+  const events = await Positron.keyboard.get_events();
   renderEvents(events);
 }
 
 async function updateKbdInfo() {
-  const info = await CrystalUI.keyboard.get_virtual_keyboard_info();
+  const info = await Positron.keyboard.get_virtual_keyboard_info();
   kbdInfo.innerHTML = `Height: <strong>${info.height} px</strong> · Visible: <strong>${info.visible}</strong>`;
 }
 
@@ -148,7 +148,7 @@ document.addEventListener('keydown', function(e) {
     meta: e.metaKey
   };
 
-  CrystalUI.emit('keyboard.keydown', payload);
+  Positron.emit('keyboard.keydown', payload);
 
   // Local preview for real keys only — don't animate bare modifier presses.
   if (!isModifierKey(e.key)) {
@@ -163,11 +163,11 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-CrystalUI.on('state.keyboard.events', function() {
+Positron.on('state.keyboard.events', function() {
   loadEvents();
 });
 
-CrystalUI.on('state.keyboard.last_event', function(event) {
+Positron.on('state.keyboard.last_event', function(event) {
   if (!event) return;
 
   showHotkeyPill({

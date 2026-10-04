@@ -1,4 +1,4 @@
-# CrystalUI — Candidate Plugins (sorted by importance, descending)
+# Positron — Candidate Plugins (sorted by importance, descending)
 # Platforms: U = Universal, D = Desktop only, M = Mobile only, M ±D = Mobile primary, desktop possible
 
 # Tier 1 — Core System Integration

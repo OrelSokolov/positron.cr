@@ -1,8 +1,8 @@
 :
-# CrystalUI — Linux Reference Implementation
+# Positron — Linux Reference Implementation
 
 This repository contains a working Linux desktop implementation of the
-**CrystalUI Host-Shim Pattern** described in `crystal-ui-architecture.md`.
+**Positron Host-Shim Pattern** described in `positron-architecture.md`.
 
 ## Philosophy
 
@@ -15,36 +15,36 @@ This repository contains a working Linux desktop implementation of the
 
 | Component | File | Notes |
 |---|---|---|
-| EventBus | `src/crystal_ui/event_bus.cr` | Internal pub/sub with per-handler fibers |
-| Command Registry | `src/crystal_ui/command_registry.cr` | JSON command dispatch + `@[Command]` macro support |
-| Plugin System | `src/crystal_ui/plugin.cr` | Base plugin + `PluginManager` |
-| Tray Item | `src/crystal_ui/tray_item.cr` | Cross-platform menu item abstraction |
-| Icon Source | `src/crystal_ui/icon_source.cr` | Cross-platform icon descriptor (SVG/PNG/ICO) |
-| WebView Config | `src/crystal_ui/web_view_config.cr` | Platform-agnostic WebView creation config |
-| Host Abstraction | `src/crystal_ui/host.cr` | Shared dispatch/bind logic + `emit_to_js` |
-| Application API | `src/crystal_ui/application.cr` | `on_ready`, lifecycle, deep links, permissions |
-| Desktop Host | `src/crystal_ui/desktop_host.cr` | Wires WebView, tray, commands, EventBus |
-| Mobile Host | `src/crystal_ui/mobile_host.cr` | Base for Android/iOS host integration |
-| Linux EventLoop | `src/crystal_ui/event_loop/linux.cr` | GTK main loop + Crystal fiber idle source |
-| Dev Asset Server | `src/crystal_ui/dev/asset_server.cr` | Serve frontend from disk + live reload |
-| TS Bindings | `src/crystal_ui/bindings_generator.cr` | Typed `crystal-ui.d.ts` from manifests |
-| CLI | `src/crystal_ui/cli.cr` | `crystal-ui init/dev/build/doctor/package` |
-| Packaging | `src/crystal_ui/packaging.cr` | `.desktop`, hicolor icons, AppDir/AppImage, deb |
-| Clipboard Plugin | `src/crystal_ui/plugins/clipboard/` | Text / image / file clipboard access |
-| Window Plugin | `src/crystal_ui/plugins/window/` | Window control from JS (title, size, fullscreen…) |
-| Filesystem Plugin | `src/crystal_ui/plugins/filesystem/` | XDG dirs, read/write/list, optional sandbox |
-| Dialogs Plugin | `src/crystal_ui/plugins/dialogs/` | Native alert / confirm / prompt |
-| Lifecycle Plugin | `src/crystal_ui/plugins/lifecycle/` | `lifecycle.*` events to the frontend |
-| Deep Links Plugin | `src/crystal_ui/plugins/deep_links/` | Single instance + URL forwarding |
-| Permissions Plugin | `src/crystal_ui/plugins/permissions/` | Desktop trust model, mobile-ready shape |
-| Secure Storage Plugin | `src/crystal_ui/plugins/secure_storage/` | AES-256-CBC + HMAC, PBKDF2 (stdlib crypto) |
-| SQLite Plugin | `src/crystal_ui/plugins/sqlite/` | Direct FFI to libsqlite3 (opt-in require) |
-| WebView Adapter | `src/crystal_ui/adapters/linux/webkit_gtk.cr` | WebKitGTK 4.1, window API, devtools, drag&drop |
-| Tray Adapter | `src/crystal_ui/adapters/linux/app_indicator_tray.cr` | Ayatana AppIndicator |
-| Windows Adapters (stub) | `src/crystal_ui/adapters/windows/` | WebView2 + NotifyIcon placeholders |
-| macOS Adapters (stub) | `src/crystal_ui/adapters/macos/` | WKWebView + StatusBar placeholders |
-| Android Host (stub) | `src/crystal_ui/adapters/android/host.cr` | Mobile host placeholder |
-| iOS Host (stub) | `src/crystal_ui/adapters/ios/host.cr` | Mobile host placeholder |
+| EventBus | `src/positron/event_bus.cr` | Internal pub/sub with per-handler fibers |
+| Command Registry | `src/positron/command_registry.cr` | JSON command dispatch + `@[Command]` macro support |
+| Plugin System | `src/positron/plugin.cr` | Base plugin + `PluginManager` |
+| Tray Item | `src/positron/tray_item.cr` | Cross-platform menu item abstraction |
+| Icon Source | `src/positron/icon_source.cr` | Cross-platform icon descriptor (SVG/PNG/ICO) |
+| WebView Config | `src/positron/web_view_config.cr` | Platform-agnostic WebView creation config |
+| Host Abstraction | `src/positron/host.cr` | Shared dispatch/bind logic + `emit_to_js` |
+| Application API | `src/positron/application.cr` | `on_ready`, lifecycle, deep links, permissions |
+| Desktop Host | `src/positron/desktop_host.cr` | Wires WebView, tray, commands, EventBus |
+| Mobile Host | `src/positron/mobile_host.cr` | Base for Android/iOS host integration |
+| Linux EventLoop | `src/positron/event_loop/linux.cr` | GTK main loop + Crystal fiber idle source |
+| Dev Asset Server | `src/positron/dev/asset_server.cr` | Serve frontend from disk + live reload |
+| TS Bindings | `src/positron/bindings_generator.cr` | Typed `positron.d.ts` from manifests |
+| CLI | `src/positron/cli.cr` | `positron init/dev/build/doctor/package` |
+| Packaging | `src/positron/packaging.cr` | `.desktop`, hicolor icons, AppDir/AppImage, deb |
+| Clipboard Plugin | `src/positron/plugins/clipboard/` | Text / image / file clipboard access |
+| Window Plugin | `src/positron/plugins/window/` | Window control from JS (title, size, fullscreen…) |
+| Filesystem Plugin | `src/positron/plugins/filesystem/` | XDG dirs, read/write/list, optional sandbox |
+| Dialogs Plugin | `src/positron/plugins/dialogs/` | Native alert / confirm / prompt |
+| Lifecycle Plugin | `src/positron/plugins/lifecycle/` | `lifecycle.*` events to the frontend |
+| Deep Links Plugin | `src/positron/plugins/deep_links/` | Single instance + URL forwarding |
+| Permissions Plugin | `src/positron/plugins/permissions/` | Desktop trust model, mobile-ready shape |
+| Secure Storage Plugin | `src/positron/plugins/secure_storage/` | AES-256-CBC + HMAC, PBKDF2 (stdlib crypto) |
+| SQLite Plugin | `src/positron/plugins/sqlite/` | Direct FFI to libsqlite3 (opt-in require) |
+| WebView Adapter | `src/positron/adapters/linux/webkit_gtk.cr` | WebKitGTK 4.1, window API, devtools, drag&drop |
+| Tray Adapter | `src/positron/adapters/linux/app_indicator_tray.cr` | Ayatana AppIndicator |
+| Windows Adapters (stub) | `src/positron/adapters/windows/` | WebView2 + NotifyIcon placeholders |
+| macOS Adapters (stub) | `src/positron/adapters/macos/` | WKWebView + StatusBar placeholders |
+| Android Host (stub) | `src/positron/adapters/android/host.cr` | Mobile host placeholder |
+| iOS Host (stub) | `src/positron/adapters/ios/host.cr` | Mobile host placeholder |
 
 ## Requirements
 
@@ -92,14 +92,14 @@ crystal build examples/clipboard.cr -o examples/clipboard-bin
 Copy text or an image to the system clipboard, then press `Ctrl+V` inside the
 webview (or use the buttons) to paste it back through the Crystal Host.
 Clicking the button in the web page sends a JSON message to the Crystal Host
-via the generic `CrystalBridge.postMessage` runtime, which the Linux adapter
+via the generic `PositronBridge.postMessage` runtime, which the Linux adapter
 wires to `window.webkit.messageHandlers.crystal.postMessage` under the hood.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│           CrystalUI Host                │
+│           Positron Host                │
 │  Application  →  DesktopHost            │
 │  CommandRegistry  →  EventBus           │
 │  PluginManager                          │
@@ -116,8 +116,8 @@ wires to `window.webkit.messageHandlers.crystal.postMessage` under the hood.
 
 ```
 src/
-  crystal_ui.cr                          # Main entry point
-  crystal_ui/
+  positron.cr                          # Main entry point
+  positron/
     event_bus.cr                         # Internal pub/sub
     command_registry.cr                  # Command dispatch
     plugin.cr                            # Plugin base + manager
@@ -181,10 +181,10 @@ The tray follows the cross-platform design of `getlantern/systray`:
 # icon_source is generated by embed_application_files and picks the right
 # format (.svg on Linux, .ico on Windows, .png on macOS) at compile time.
 tray.set_icon(icon_source)
-tray.set_title("CrystalUI")
-tray.add_or_update_item(CrystalUI::TrayItem.new(id: 1, title: "Open"))
+tray.set_title("Positron")
+tray.add_or_update_item(Positron::TrayItem.new(id: 1, title: "Open"))
 tray.add_separator(2)
-tray.add_or_update_item(CrystalUI::TrayItem.new(id: 3, title: "Quit"))
+tray.add_or_update_item(Positron::TrayItem.new(id: 3, title: "Quit"))
 
 tray.on_item_click do |id|
   case id
@@ -223,7 +223,7 @@ Then in your application:
 embed_application_files(__DIR__, "../assets/crystal-icon")
 
 def on_ready
-  webview.create(CrystalUI::WebViewConfig.new(
+  webview.create(Positron::WebViewConfig.new(
     title: "MyApp",
     icon: icon_source
   ))
@@ -239,12 +239,12 @@ and `icon_source` with the correct `IconSource` format tag.
 Add a `@[Command]` method to the example application:
 
 ```crystal
-class HelloApp < CrystalUI::Application
+class HelloApp < Positron::Application
   def register_commands(registry)
     command_registry
   end
 
-  @[CrystalUI::Command]
+  @[Positron::Command]
   def greet(name : String) : String
     "Hello, #{name}!"
   end
@@ -254,13 +254,13 @@ end
 From JavaScript the runtime uses the platform-agnostic bridge:
 
 ```javascript
-CrystalUI.call("greet", { name: "Crystal" }).then(result => {
+Positron.call("greet", { name: "Crystal" }).then(result => {
   console.log(result);
 });
 ```
 
 The Host dispatches the call in Crystal and resolves the promise with
-`window.__crystalResolve(id, success, data, error)`.
+`window.__positronResolve(id, success, data, error)`.
 
 ## Embedding assets & custom URI schemes
 
@@ -273,16 +273,16 @@ literals; relative paths resolve against the compiler's working directory.
 Serve the embedded tree to the WebView without any HTTP server:
 
 ```crystal
-class MyApp < CrystalUI::Application
+class MyApp < Positron::Application
   embed_directory("frontend")
 
   def on_ready
     webview.register_uri_scheme("app") do |path|
       if bytes = embedded_file?(path)
-        CrystalUI::SchemeResponse.new(bytes, "text/html; charset=utf-8")
+        Positron::SchemeResponse.new(bytes, "text/html; charset=utf-8")
       end
     end
-    webview.create(CrystalUI::WebViewConfig.new(title: "MyApp", close_to_tray: false))
+    webview.create(Positron::WebViewConfig.new(title: "MyApp", close_to_tray: false))
     webview.load_url("app://myapp/")
   end
 end
@@ -301,10 +301,10 @@ on the fly, so one frontend source serves both modes:
 
 ```crystal
 def on_ready
-  webview.create(CrystalUI::WebViewConfig.new(title: "MyApp", close_to_tray: false))
+  webview.create(Positron::WebViewConfig.new(title: "MyApp", close_to_tray: false))
   webview.bind("crystal") { |json| host.dispatch(json) }
 
-  if CrystalUI::Dev.enabled?   # CRYSTAL_UI_DEV=1
+  if Positron::Dev.enabled?   # POSITRON_DEV=1
     webview.load_url(serve_directory(File.join(__DIR__, "frontend")))
   else
     webview.load_html(application_html)
@@ -313,20 +313,20 @@ end
 ```
 
 On every dev start, typed TypeScript declarations are regenerated into
-`<frontend>/crystal-ui.d.ts` from the plugin manifests and your
+`<frontend>/positron.d.ts` from the plugin manifests and your
 `@[Command]` methods.
 
-## The `crystal-ui` CLI
+## The `positron` CLI
 
 ```bash
-rake build:cli                       # builds bin/crystal-ui
+rake build:cli                       # builds bin/positron
 
-CRYSTAL_UI_PATH=/path/to/crystalui bin/crystal-ui init my-app
+POSITRON_PATH=/path/to/positron bin/positron init my-app
 cd my-app && shards install
-bin/crystal-ui dev                   # rebuild-if-stale + live reload
-bin/crystal-ui build                 # release binary in bin/
-bin/crystal-ui doctor                # toolchain and native deps check
-bin/crystal-ui package [--install]   # icons, .desktop entry, AppDir/AppImage
+bin/positron dev                   # rebuild-if-stale + live reload
+bin/positron build                 # release binary in bin/
+bin/positron doctor                # toolchain and native deps check
+bin/positron package [--install]   # icons, .desktop entry, AppDir/AppImage
 ```
 
 ## Window management
@@ -339,8 +339,8 @@ WebKitGTK adapter. Window changes are broadcast as events
 to JS. The `window` plugin exposes the same surface to the frontend:
 
 ```javascript
-await CrystalUI.window.fullscreen();
-CrystalUI.on("window.resized", ({width, height}) => console.log(width, height));
+await Positron.window.fullscreen();
+Positron.on("window.resized", ({width, height}) => console.log(width, height));
 ```
 
 Multi-window support is intentionally out of scope.
@@ -348,7 +348,7 @@ Multi-window support is intentionally out of scope.
 ## Events from Crystal to JS
 
 `Host#emit_to_js(event, payload)` is the single supported channel — it
-marshals to the GUI thread and notifies all `CrystalUI.on(event, …)`
+marshals to the GUI thread and notifies all `Positron.on(event, …)`
 subscribers. Window events, `dnd.files` (drag & drop),
 `lifecycle.*`, `deep_link.opened` and plugin callbacks all use it.
 
@@ -358,19 +358,19 @@ The SQLite plugin binds libsqlite3 directly (no shard dependency).
 Enable it explicitly so apps without a database don't link it:
 
 ```crystal
-require "crystal_ui/plugins/sqlite/plugin"
+require "positron/plugins/sqlite/plugin"
 
-class MyApp < CrystalUI::Application
+class MyApp < Positron::Application
   def configure_plugins
-    register_plugin(CrystalUI::Plugins::Sqlite.new(app_id: "myapp"))
+    register_plugin(Positron::Plugins::Sqlite.new(app_id: "myapp"))
   end
 end
 ```
 
 ```javascript
-await CrystalUI.sqlite.exec(
+await Positron.sqlite.exec(
   "CREATE TABLE notes (id INTEGER PRIMARY KEY, title TEXT)");
-await CrystalUI.sqlite.query("SELECT * FROM notes");
+await Positron.sqlite.query("SELECT * FROM notes");
 ```
 
 ## License

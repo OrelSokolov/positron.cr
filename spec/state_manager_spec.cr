@@ -1,9 +1,9 @@
-require "../src/crystal_ui/state_manager"
+require "../src/positron/state_manager"
 require "spec"
 require "json"
 
-describe CrystalUI::StateManager do
-  manager = CrystalUI::StateManager.new
+describe Positron::StateManager do
+  manager = Positron::StateManager.new
 
   it "stores and retrieves plugin state" do
     manager.load_plugin_state("settings", {"theme" => JSON.parse(%("dark"))})
@@ -29,7 +29,7 @@ describe CrystalUI::StateManager do
       nil
     end
 
-    CrystalUI::EventBus.on("state.changed", &handler)
+    Positron::EventBus.on("state.changed", &handler)
     manager.set("settings", "theme", "light")
 
     sleep 50.milliseconds
@@ -41,7 +41,7 @@ describe CrystalUI::StateManager do
 
     manager.get("settings", "theme").not_nil!.to_s.should eq("light")
 
-    CrystalUI::EventBus.off("state.changed", handler)
+    Positron::EventBus.off("state.changed", handler)
   end
 
   it "takes a full snapshot" do
@@ -59,7 +59,7 @@ describe CrystalUI::StateManager do
   end
 
   it "hydrate replaces all state" do
-    sm = CrystalUI::StateManager.new
+    sm = Positron::StateManager.new
     sm.load_plugin_state("a", {"x" => JSON.parse("1")})
 
     sm.hydrate({"fresh" => JSON.parse(%({"y": 2}))})

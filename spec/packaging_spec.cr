@@ -1,10 +1,10 @@
-require "../src/crystal_ui/packaging"
+require "../src/positron/packaging"
 require "spec"
 require "file_utils"
 
-describe CrystalUI::Packaging do
+describe Positron::Packaging do
   it "renders a .desktop entry with schemes and icon" do
-    entry = CrystalUI::Packaging.desktop_entry(
+    entry = Positron::Packaging.desktop_entry(
       app_id: "myapp",
       name: "My App",
       exec: "/usr/bin/myapp",
@@ -24,7 +24,7 @@ describe CrystalUI::Packaging do
   end
 
   it "renders a .desktop entry without optional fields" do
-    entry = CrystalUI::Packaging.desktop_entry(
+    entry = Positron::Packaging.desktop_entry(
       app_id: "myapp", name: "My App", exec: "myapp")
 
     entry.should_not contain("Comment=")
@@ -32,15 +32,15 @@ describe CrystalUI::Packaging do
   end
 
   it "generates hicolor icons when a converter is available" do
-    converter = CrystalUI::Packaging.find_icon_converter
+    converter = Positron::Packaging.find_icon_converter
     next pending!("no icon converter (rsvg-convert/imagemagick) installed") unless converter
 
-    dir = File.join(Dir.tempdir, "crystalui-pack-spec-#{Random::Secure.hex(6)}")
+    dir = File.join(Dir.tempdir, "positron-pack-spec-#{Random::Secure.hex(6)}")
     FileUtils.mkdir_p(dir)
     master = File.join(dir, "icon.svg")
     File.write(master, %(<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#0af"/></svg>))
 
-    written = CrystalUI::Packaging.generate_hicolor_icons(master, dir, [16, 48])
+    written = Positron::Packaging.generate_hicolor_icons(master, dir, [16, 48])
 
     written.size.should eq(2)
     written.each do |path|
@@ -53,7 +53,7 @@ describe CrystalUI::Packaging do
   end
 
   it "builds an AppDir scaffold around a binary" do
-    dir = File.join(Dir.tempdir, "crystalui-appdir-spec-#{Random::Secure.hex(6)}")
+    dir = File.join(Dir.tempdir, "positron-appdir-spec-#{Random::Secure.hex(6)}")
     FileUtils.mkdir_p(dir)
     binary = File.join(dir, "myapp")
     File.write(binary, "#!/bin/sh\ntrue\n")
@@ -61,10 +61,10 @@ describe CrystalUI::Packaging do
     icon = File.join(dir, "myapp.png")
     File.write(icon, "png")
 
-    entry = CrystalUI::Packaging.desktop_entry(
+    entry = Positron::Packaging.desktop_entry(
       app_id: "myapp", name: "My App", exec: "myapp")
 
-    result = CrystalUI::Packaging.build_appdir("myapp", binary, icon, entry,
+    result = Positron::Packaging.build_appdir("myapp", binary, icon, entry,
       output_dir: File.join(dir, "dist"))
 
     app_dir = File.join(dir, "dist", "myapp.AppDir")
@@ -83,12 +83,12 @@ describe CrystalUI::Packaging do
   end
 
   it "renders a debian control file" do
-    control = CrystalUI::Packaging.debian_control(
-      "myapp", "1.2.3", "A CrystalUI application")
+    control = Positron::Packaging.debian_control(
+      "myapp", "1.2.3", "A Positron application")
 
     control.should contain("Package: myapp")
     control.should contain("Version: 1.2.3")
     control.should contain("Depends: libgtk-3-0, libwebkit2gtk-4.1-0")
-    control.should contain("Description: A CrystalUI application")
+    control.should contain("Description: A Positron application")
   end
 end

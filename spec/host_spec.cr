@@ -1,20 +1,20 @@
-require "../src/crystal_ui/event_bus"
-require "../src/crystal_ui/command_registry"
-require "../src/crystal_ui/state_manager"
-require "../src/crystal_ui/plugin"
-require "../src/crystal_ui/js_facade_generator"
-require "../src/crystal_ui/ports/webview_port"
-require "../src/crystal_ui/ports/tray_port"
-require "../src/crystal_ui/application"
-require "../src/crystal_ui/host"
+require "../src/positron/event_bus"
+require "../src/positron/command_registry"
+require "../src/positron/state_manager"
+require "../src/positron/plugin"
+require "../src/positron/js_facade_generator"
+require "../src/positron/ports/webview_port"
+require "../src/positron/ports/tray_port"
+require "../src/positron/application"
+require "../src/positron/host"
 require "spec"
 require "json"
 
 # Headless fakes so Host#dispatch can be exercised without a GUI.
-class NullWebView < CrystalUI::WebViewPort
+class NullWebView < Positron::WebViewPort
   property evals = [] of String
 
-  def create(config : CrystalUI::WebViewConfig); end
+  def create(config : Positron::WebViewConfig); end
 
   def load_url(url : String); end
 
@@ -33,20 +33,20 @@ class NullWebView < CrystalUI::WebViewPort
   def bind(name : String, &handler : String -> String); end
 end
 
-class NullTray < CrystalUI::TrayPort
+class NullTray < Positron::TrayPort
   def supported? : Bool
     false
   end
 
-  def create(icon : CrystalUI::IconSource? = nil, title : String? = nil); end
+  def create(icon : Positron::IconSource? = nil, title : String? = nil); end
 
-  def set_icon(icon : CrystalUI::IconSource); end
+  def set_icon(icon : Positron::IconSource); end
 
   def set_title(title : String); end
 
   def set_tooltip(tooltip : String); end
 
-  def add_or_update_item(item : CrystalUI::TrayItem); end
+  def add_or_update_item(item : Positron::TrayItem); end
 
   def add_separator(id : Int32); end
 
@@ -65,12 +65,12 @@ class NullTray < CrystalUI::TrayPort
   def quit; end
 end
 
-class FakeHost < CrystalUI::Host
-  getter webview : CrystalUI::WebViewPort
-  getter tray : CrystalUI::TrayPort
+class FakeHost < Positron::Host
+  getter webview : Positron::WebViewPort
+  getter tray : Positron::TrayPort
   getter main_calls = 0
 
-  def initialize(app : CrystalUI::Application)
+  def initialize(app : Positron::Application)
     @webview = NullWebView.new
     @tray = NullTray.new
     super(app)
@@ -90,7 +90,7 @@ class FakeHost < CrystalUI::Host
   def stop; end
 end
 
-class DispatchApp < CrystalUI::Application
+class DispatchApp < Positron::Application
   getter greeted = [] of String
 
   def on_ready; end
@@ -99,11 +99,11 @@ class DispatchApp < CrystalUI::Application
     ""
   end
 
-  def register_commands(registry : CrystalUI::CommandRegistry)
+  def register_commands(registry : Positron::CommandRegistry)
     registry.register("greet") do |request|
       name = request.args["name"]?.try(&.as_s?) || "world"
       @greeted << name
-      CrystalUI::CommandResult.new(
+      Positron::CommandResult.new(
         success: true,
         data: JSON.parse("Hello, #{name}!".to_json)
       )
@@ -117,7 +117,7 @@ def build_host
   {host, app}
 end
 
-describe CrystalUI::Host do
+describe Positron::Host do
   it "dispatches command envelopes and resolves the JS promise" do
     host, app = build_host
 
@@ -134,7 +134,7 @@ describe CrystalUI::Host do
     host, _app = build_host
 
     received = [] of String
-    CrystalUI::EventBus.on("spec.hostevent") do |payload|
+    Positron::EventBus.on("spec.hostevent") do |payload|
       received << payload["url"].to_s
     end
 
@@ -170,7 +170,7 @@ describe CrystalUI::Host do
 
     evals = host.webview.as(NullWebView).evals
     evals.size.should eq(1)
-    evals[0].should contain("window.__crystalNotify(\"plugin.event\"")
+    evals[0].should contain("window.__positronNotify(\"plugin.event\"")
     evals[0].should contain("\"value\":42")
   end
 end

@@ -1,11 +1,11 @@
-name: crystal_ui
+name: positron
 version: 0.1.0
 
 authors:
-  - CrystalUI Contributors
+  - Positron Contributors
 
 description: |
-  CrystalUI — host-shim UI framework. Crystal Host owns state and logic;
+  Positron — host-shim UI framework. Crystal Host owns state and logic;
   native code is a thin shim that exposes OS APIs to Crystal.
 
 license: MIT
@@ -13,10 +13,10 @@ license: MIT
 crystal: ">= 1.10.0"
 
 targets:
-  crystal-ui-hello:
+  positron-hello:
     main: examples/hello.cr
-  crystal-ui:
-    main: src/crystal_ui/cli.cr
+  positron:
+    main: src/positron/cli.cr
 
 dependencies: {}
 

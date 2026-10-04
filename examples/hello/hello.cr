@@ -1,13 +1,13 @@
 require "uri"
 require "json"
 require "time"
-require "../../src/crystal_ui"
+require "../../src/positron"
 
 # Example plugin demonstrating the RailsWay architecture:
 # - explicit command binding via bind()
 # - manifest for JS facade generation
 # - observable state via StateManager
-class SettingsPlugin < CrystalUI::Plugin
+class SettingsPlugin < Positron::Plugin
   property theme : String = "dark"
 
   def name : String
@@ -24,25 +24,25 @@ class SettingsPlugin < CrystalUI::Plugin
     }
   end
 
-  def manifest : Hash(String, CrystalUI::CommandManifest)
+  def manifest : Hash(String, Positron::CommandManifest)
     {
-      "settings.current_theme" => CrystalUI::CommandManifest.new(
+      "settings.current_theme" => Positron::CommandManifest.new(
         name: "settings.current_theme",
         returns: "String"
       ),
-      "settings.set_theme" => CrystalUI::CommandManifest.new(
+      "settings.set_theme" => Positron::CommandManifest.new(
         name: "settings.set_theme",
         args: [
-          CrystalUI::ArgumentManifest.new(name: "theme", type: "String"),
+          Positron::ArgumentManifest.new(name: "theme", type: "String"),
         ],
         returns: "String"
       ),
     }
   end
 
-  def bind(registry : CrystalUI::CommandRegistry, state : CrystalUI::StateManager)
+  def bind(registry : Positron::CommandRegistry, state : Positron::StateManager)
     registry.register("settings.current_theme") do |request|
-      CrystalUI::CommandResult.new(
+      Positron::CommandResult.new(
         success: true,
         data: JSON.parse(@theme.to_json)
       )
@@ -51,7 +51,7 @@ class SettingsPlugin < CrystalUI::Plugin
     registry.register("settings.set_theme") do |request|
       @theme = request.args["theme"].as_s
       set_state("theme", @theme)
-      CrystalUI::CommandResult.new(
+      Positron::CommandResult.new(
         success: true,
         data: JSON.parse(@theme.to_json)
       )
@@ -59,13 +59,13 @@ class SettingsPlugin < CrystalUI::Plugin
   end
 end
 
-class HelloApp < CrystalUI::Application
+class HelloApp < Positron::Application
   # Embed frontend/application.html, application.css, application.js and icon.
   embed_application_files(__DIR__, "../../assets/crystal-icon")
 
   def configure_plugins
     use SettingsPlugin
-    use CrystalUI::Plugins::Logger
+    use Positron::Plugins::Logger
   end
 
   def register_commands(registry)
@@ -73,8 +73,8 @@ class HelloApp < CrystalUI::Application
   end
 
   def on_ready
-    webview.create(CrystalUI::WebViewConfig.new(
-      title: "CrystalUI",
+    webview.create(Positron::WebViewConfig.new(
+      title: "Positron",
       width: 900,
       height: 640,
       icon: icon_source(:svg)
@@ -89,9 +89,9 @@ class HelloApp < CrystalUI::Application
     webview.load_html(application_html)
 
     tray.set_icon(icon_source(:svg))
-    tray.set_title("CrystalUI")
-    tray.add_or_update_item(CrystalUI::TrayItem.new(id: 1, title: "Open"))
-    tray.add_or_update_item(CrystalUI::TrayItem.new(id: 2, title: "Quit"))
+    tray.set_title("Positron")
+    tray.add_or_update_item(Positron::TrayItem.new(id: 1, title: "Open"))
+    tray.add_or_update_item(Positron::TrayItem.new(id: 2, title: "Quit"))
     tray.on_item_click do |id|
       case id
       when 1 then webview.show
@@ -101,7 +101,7 @@ class HelloApp < CrystalUI::Application
     tray.show
   end
 
-  @[CrystalUI::Command]
+  @[Positron::Command]
   def hello : Hash(String, String)
     {
       "message" => "Hello from the Crystal Host!",

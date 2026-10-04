@@ -1,15 +1,15 @@
 require "json"
-require "../../src/crystal_ui"
-require "../../src/crystal_ui/plugins/logger"
-require "../../src/crystal_ui/plugins/keyboard/plugin"
+require "../../src/positron"
+require "../../src/positron/plugins/logger"
+require "../../src/positron/plugins/keyboard/plugin"
 
-class KeyboardDemoApp < CrystalUI::Application
+class KeyboardDemoApp < Positron::Application
   # Embed frontend/application.html, application.css, application.js and icon.
   embed_application_files(__DIR__, "../../assets/crystal-icon")
 
   def configure_plugins
-    use CrystalUI::Plugins::Logger
-    use CrystalUI::Plugins::Keyboard
+    use Positron::Plugins::Logger
+    use Positron::Plugins::Keyboard
   end
 
   def register_commands(registry)
@@ -17,8 +17,8 @@ class KeyboardDemoApp < CrystalUI::Application
   end
 
   def on_ready
-    webview.create(CrystalUI::WebViewConfig.new(
-      title: "Keyboard Events — CrystalUI",
+    webview.create(Positron::WebViewConfig.new(
+      title: "Keyboard Events — Positron",
       width: 900,
       height: 700,
       icon: icon_source(:svg)
@@ -33,15 +33,15 @@ class KeyboardDemoApp < CrystalUI::Application
     webview.load_html(application_html)
 
     # Log matched shortcuts on the host side.
-    CrystalUI::EventBus.on("keyboard.shortcut") do |payload|
+    Positron::EventBus.on("keyboard.shortcut") do |payload|
       STDOUT.puts "[Crystal Host] shortcut matched: #{payload}"
       STDOUT.flush
     end
 
     tray.set_icon(icon_source(:svg))
     tray.set_title("Keyboard Demo")
-    tray.add_or_update_item(CrystalUI::TrayItem.new(id: 1, title: "Open"))
-    tray.add_or_update_item(CrystalUI::TrayItem.new(id: 2, title: "Quit"))
+    tray.add_or_update_item(Positron::TrayItem.new(id: 1, title: "Open"))
+    tray.add_or_update_item(Positron::TrayItem.new(id: 2, title: "Quit"))
     tray.on_item_click do |id|
       case id
       when 1 then webview.show
@@ -51,7 +51,7 @@ class KeyboardDemoApp < CrystalUI::Application
     tray.show
   end
 
-  @[CrystalUI::Command]
+  @[Positron::Command]
   def demo_action : Hash(String, String)
     {
       "message" => "Demo action executed from Crystal Host!",

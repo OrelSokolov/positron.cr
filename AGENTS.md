@@ -1,9 +1,9 @@
-# CrystalUI — Agent Notes
+# Positron — Agent Notes
 
 ## What this is
 
-CrystalUI is a **Linux-only reference implementation** of the Host-Shim
-pattern described in `crystal-ui-architecture.md`. Crystal owns all state
+Positron is a **Linux-only reference implementation** of the Host-Shim
+pattern described in `positron-architecture.md`. Crystal owns all state
 and logic; the native shim (GTK/WebKitGTK) is a passive adapter.
 
 ## Build & Test
@@ -15,7 +15,7 @@ rake build:examples
 # Run the test suite (headless, no GUI required)
 rake spec
 
-# Build the crystal-ui CLI into bin/
+# Build the positron CLI into bin/
 rake build:cli
 
 # Build a single example
@@ -26,7 +26,7 @@ Build orchestration lives in `crosspack.yml` (the [crosspack](https://rubygems.o
 gem, Ruby >= 3.2): `crosspack deps` verifies/installs the build-host
 dependencies, `crosspack build` runs specs + CLI + all examples and fans
 the binaries into `builds/<target>/`. There is intentionally **no
-`package:` section** — CrystalUI is a library, not an end product; packing
+`package:` section** — Positron is a library, not an end product; packing
 belongs to applications. Keep the `version:` in `crosspack.yml` in sync
 with `shard.yml`.
 
@@ -45,12 +45,12 @@ specs (unix sockets, SQLite FFI) are flag-gated.
 - GTK 3, WebKitGTK 4.1, Ayatana AppIndicator 3 dev files
 - libnotify (for the notifications plugin)
 - libsqlite3 dev files (only for the opt-in SQLite plugin)
-- rsvg-convert or ImageMagick, appimagetool (only for `crystal-ui package`)
+- rsvg-convert or ImageMagick, appimagetool (only for `positron package`)
 
 ## Project layout
 
 ```
-src/crystal_ui/
+src/positron/
   event_bus.cr          # internal pub/sub (fibers per handler)
   command_registry.cr   # JSON command dispatch + @[Command] macro
   state_manager.cr      # observable host state
@@ -59,11 +59,11 @@ src/crystal_ui/
   desktop_host.cr       # Linux desktop wiring (WebView + tray + loop)
   application.cr        # base class for user apps
   embed_directory.cr    # compile-time helper for Application#embed_directory
-  js_facade_generator.cr # generates CrystalUI.* JS runtime
-  bindings_generator.cr # generates crystal-ui.d.ts from manifests
+  js_facade_generator.cr # generates Positron.* JS runtime
+  bindings_generator.cr # generates positron.d.ts from manifests
   dev/asset_server.cr   # dev-mode HTTP server + live reload
   packaging.cr          # .desktop / icons / AppDir / deb helpers
-  cli.cr                # crystal-ui init/dev/build/doctor/package
+  cli.cr                # positron init/dev/build/doctor/package
   event_loop/linux.cr   # GTK main loop + Crystal fiber integration
   adapters/linux/       # WebKitGTK (window API, devtools, drag&drop),
                         # AppIndicator, icon
@@ -81,8 +81,8 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 - **Linux is the only working platform.** Windows, macOS, Android, iOS
   adapters exist as stubs — do not assume they work.
 - **Platform code stays behind ports.** Any GTK/WebKit/native call
-  belongs in `src/crystal_ui/adapters/linux/`,
-  `src/crystal_ui/event_loop/linux.cr` or `src/crystal_ui/plugins/*/linux.cr`.
+  belongs in `src/positron/adapters/linux/`,
+  `src/positron/event_loop/linux.cr` or `src/positron/plugins/*/linux.cr`.
   Core files must stay platform-pure — the macOS/Windows port (M5 in
   `ROADMAP.md`) depends on that.
 - Plugins expose a `manifest` (for JS facade / TypeScript bindings
@@ -91,7 +91,7 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 - `Plugin#on_ready(host)` is called by `DesktopHost#run` after the app's
   `on_ready`. Use it for adapter callbacks (e.g. notification clicks).
 - The JS bridge envelope: `{"type":"command","id","name","args"}`.
-  Responses go back via `window.__crystalResolve(id, success, data, error)`.
+  Responses go back via `window.__positronResolve(id, success, data, error)`.
 - **Never hand-roll `eval_js` strings to push events to the frontend** —
   use `Host#emit_to_js(event, payload)`.
 - Examples use `embed_application_files(__DIR__, icon_path)` to bake
@@ -106,12 +106,12 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 - `WebViewConfig#close_to_tray` (default true): false makes the window close
   button quit the event loop instead of hiding to the tray.
 - Dev mode: `Application#serve_directory(dir)` serves the frontend from
-  disk with live reload; `CRYSTAL_UI_DEV=1` switches one binary between
-  served and embedded assets (this is what `crystal-ui dev` sets).
+  disk with live reload; `POSITRON_DEV=1` switches one binary between
+  served and embedded assets (this is what `positron dev` sets).
 
 ## Known gaps (by design, not bugs)
 
 - No macOS/Windows adapters yet (M5 in `ROADMAP.md`) — stubs only.
-- No mobile entry points (`src/crystal_ui/entry/`).
+- No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.
 - Many Tier-2+ plugins from `plugins.txt` are not yet implemented.

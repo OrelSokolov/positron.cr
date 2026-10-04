@@ -1,8 +1,8 @@
-# crosspack — build orchestration for the CrystalUI shard.
+# crosspack — build orchestration for the Positron shard.
 #
-# CrystalUI is a library, not an end product: this file carries the build
+# Positron is a library, not an end product: this file carries the build
 # matrix and the dependencies only. There is deliberately no package:
-# section — `crosspack pack` is for applications built *with* CrystalUI.
+# section — `crosspack pack` is for applications built *with* Positron.
 #
 #   crosspack deps              # verify/install this host's build deps
 #   crosspack build             # specs + CLI + all examples -> builds/
@@ -10,7 +10,7 @@
 #
 # The version follows shard.yml — bump both together.
 
-name: crystal-ui
+name: positron
 version: 0.1.0
 
 build:
@@ -98,7 +98,7 @@ build:
       build: linux/amd64
       steps:
         - crystal spec          # specs must pass — same gate as CI
-        - rake build:cli        # bin/crystal-ui
+        - rake build:cli        # bin/positron
         - rake build:examples   # examples/<name>/<name>, logs to logs/
         - cp examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
       artifacts:
@@ -106,7 +106,7 @@ build:
         include: ["*"]
         to: [debian-12, ubuntu-22.04, ubuntu-24.04, ubuntu-25.10, fedora-41, arch]
 
-# Runtime-axis dependencies: the native libraries a CrystalUI application
+# Runtime-axis dependencies: the native libraries a Positron application
 # links at run time, per distro family. Linux only — the framework's
 # working platform (macos/windows adapters are stubs).
 deps:

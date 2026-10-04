@@ -65,19 +65,19 @@ def build_example(name)
 end
 
 namespace :build do
-  desc "Build the crystal-ui CLI into bin/"
+  desc "Build the positron CLI into bin/"
   task :cli do
     FileUtils.mkdir_p("bin")
     source_dir = File.expand_path(__dir__)
-    sh "#{CRYSTAL_CMD} build #{CRYSTAL_FLAGS} src/crystal_ui/cli.cr -o bin/crystal-ui" \
-      " --define crystal_ui_source_dir=#{source_dir.inspect}"
+    sh "#{CRYSTAL_CMD} build #{CRYSTAL_FLAGS} src/positron/cli.cr -o bin/positron" \
+      " --define positron_source_dir=#{source_dir.inspect}"
   end
 end
 
 namespace :build do
   desc "Build all examples sequentially and write logs to logs/"
   task :examples do
-    puts colorize("CrystalUI — building examples", :blue)
+    puts colorize("Positron — building examples", :blue)
     puts "=" * 50
 
     results = example_names.to_h { |name| [name, build_example(name)] }

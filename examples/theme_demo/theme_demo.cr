@@ -1,10 +1,10 @@
-require "../../src/crystal_ui"
+require "../../src/positron"
 
-class ThemeDemoApp < CrystalUI::Application
+class ThemeDemoApp < Positron::Application
   embed_application_files(__DIR__, "../../assets/crystal-icon")
 
   def configure_plugins
-    use CrystalUI::Plugins::Theme
+    use Positron::Plugins::Theme
   end
 
   def register_commands(registry)
@@ -12,8 +12,8 @@ class ThemeDemoApp < CrystalUI::Application
   end
 
   def on_ready
-    webview.create(CrystalUI::WebViewConfig.new(
-      title: "CrystalUI Theme Demo",
+    webview.create(Positron::WebViewConfig.new(
+      title: "Positron Theme Demo",
       width: 640,
       height: 480,
       icon: icon_source(:svg)

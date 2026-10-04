@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to CrystalUI are documented here. The format is based
+All notable changes to Positron are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
@@ -16,7 +16,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   targets, so Windows stub builds link no native libraries; the
   corresponding specs are flag-gated. CI installs `openssl@3` (with
   `PKG_CONFIG_PATH`) on macOS and `libsqlite3-dev` on Linux for the
-  unix-gated specs, and builds the `crystal-ui` CLI on every runner.
+  unix-gated specs, and builds the `positron` CLI on every runner.
 - Window plugin: command blocks now return explicit `JSON::Any` (was an
   uninferred block return type), fixing compilation on newer Crystal
   releases where the `-> _` inference is rejected.
@@ -37,8 +37,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `Host#emit_to_js(event, payload)` — the single supported way to push
   events from Crystal to the frontend (main-thread marshalled); plugins
   migrated off raw `eval_js` strings. Also fixes notifications calling
-  `CrystalUI.__crystalNotify`, which was only defined on `window`. (M1)
-- Dev mode with live reload: `CrystalUI::Dev::AssetServer` +
+  `Positron.__positronNotify`, which was only defined on `window`. (M1)
+- Dev mode with live reload: `Positron::Dev::AssetServer` +
   `Application#serve_directory` — serve `frontend/` from disk, reload
   the WebView on change without recompiling; release-template markers
   (`{{CSS}}`, `{{JS}}`, `{{RUNTIME_JS}}`, `{{HYDRATE_JS}}`) are
@@ -59,14 +59,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
   dependency): `sqlite.query/exec/close` with positional binds. (M4)
 - Drag and drop: files dropped on the window are forwarded to the
   frontend as `dnd.files` events. (M4)
-- `crystal-ui` CLI (`src/crystal_ui/cli.cr`, `rake build:cli`): `init`,
+- `positron` CLI (`src/positron/cli.cr`, `rake build:cli`): `init`,
   `dev` (rebuild-if-stale + live reload), `build`, `doctor`,
   `package`. (M2/M6)
 - TypeScript bindings generation
-  (`CrystalUI::BindingsGenerator`): `@[Command]` manifests from the
+  (`Positron::BindingsGenerator`): `@[Command]` manifests from the
   `command_registry` macro, typed plugin namespaces, written to
-  `<frontend>/crystal-ui.d.ts` on every dev-server start. (M2)
-- Linux packaging helpers (`CrystalUI::Packaging`): `.desktop` files,
+  `<frontend>/positron.d.ts` on every dev-server start. (M2)
+- Linux packaging helpers (`Positron::Packaging`): `.desktop` files,
   hicolor icon pipeline (rsvg-convert/ImageMagick), AppDir/AppImage
   scaffolding, deb control templates. (M6)
 - Specs for plugins (fs sandbox, secure storage round-trip, deep links

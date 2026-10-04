@@ -1,9 +1,9 @@
-require "../src/crystal_ui/dev/asset_server"
+require "../src/positron/dev/asset_server"
 require "spec"
 require "http/client"
 require "file_utils"
 
-describe CrystalUI::Dev::AssetServer do
+describe Positron::Dev::AssetServer do
   it "serves files from disk with correct mime types" do
     with_frontend_dir do |dir|
       server = start_server(dir)
@@ -24,7 +24,7 @@ describe CrystalUI::Dev::AssetServer do
 
   it "injects runtime snippets into HTML responses" do
     with_frontend_dir do |dir|
-      server = CrystalUI::Dev::AssetServer.new(
+      server = Positron::Dev::AssetServer.new(
         dir,
         runtime_provider: -> { ["window.__testRuntime = 1;"] },
       ) { }
@@ -69,7 +69,7 @@ describe CrystalUI::Dev::AssetServer do
   it "fires the reload callback when a file changes" do
     with_frontend_dir do |dir|
       reloaded = 0
-      server = CrystalUI::Dev::AssetServer.new(dir) { reloaded += 1 }
+      server = Positron::Dev::AssetServer.new(dir) { reloaded += 1 }
       server.start
 
       # No reload without changes (the watcher polls every 500ms).
@@ -86,7 +86,7 @@ describe CrystalUI::Dev::AssetServer do
 end
 
 def start_server(dir)
-  server = CrystalUI::Dev::AssetServer.new(dir) { }
+  server = Positron::Dev::AssetServer.new(dir) { }
   server.start
   server
 end
@@ -102,7 +102,7 @@ def get_status(server, path) : Int32
 end
 
 def with_frontend_dir(&)
-  dir = File.join(Dir.tempdir, "crystalui-spec-#{Random::Secure.hex(6)}")
+  dir = File.join(Dir.tempdir, "positron-spec-#{Random::Secure.hex(6)}")
   FileUtils.mkdir_p(dir)
   File.write(File.join(dir, "index.html"), "<html><head><title>t</title></head><body><h1>hello dev</h1></body></html>")
   File.write(File.join(dir, "style.css"), "body { color: red; }")

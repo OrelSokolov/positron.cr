@@ -1,4 +1,4 @@
-# CrystalUI Roadmap: From Reference Implementation to Real Framework
+# Positron Roadmap: From Reference Implementation to Real Framework
 
 This document describes what stands between the current Linux reference
 implementation and a usable desktop framework in the spirit of Wails:
@@ -18,9 +18,9 @@ Working (Linux only):
   `Host`/`DesktopHost` wiring, GTK event loop with Crystal fiber integration.
 - WebView adapter (WebKitGTK 4.1), tray adapter (Ayatana AppIndicator),
   custom URI schemes backed by compile-time embedded assets.
-- JS runtime facade (`CrystalUI.call/emit/on/state`) with plugin namespaces
+- JS runtime facade (`Positron.call/emit/on/state`) with plugin namespaces
   and `Host#emit_to_js` for Crystal → JS events.
-- Dev mode: `CrystalUI::Dev::AssetServer` + `Application#serve_directory`
+- Dev mode: `Positron::Dev::AssetServer` + `Application#serve_directory`
   (serve `frontend/` from disk, live reload, marker substitution, TS
   bindings regenerated on start).
 - Window management API on `WebViewPort` (title/size/position/fullscreen/
@@ -29,7 +29,7 @@ Working (Linux only):
   keyboard, logger, notifications, preferences, theme, window,
   filesystem, dialogs, lifecycle, permissions, deep links,
   secure storage, SQLite (opt-in require).
-- `crystal-ui` CLI: `init` / `dev` / `build` / `doctor` / `package`.
+- `positron` CLI: `init` / `dev` / `build` / `doctor` / `package`.
 - Packaging helpers: `.desktop` entries, hicolor icon pipeline,
   AppDir/AppImage scaffolding, deb control templates.
 - Headless specs (48+) for core, plugins, dev server, bindings,
@@ -56,7 +56,7 @@ Ordered by dependency and impact. Effort markers are rough:
 
 **1.1 Dev asset server + live reload**
 
-- [x] `CrystalUI::Dev::AssetServer` (`src/crystal_ui/dev/asset_server.cr`):
+- [x] `Positron::Dev::AssetServer` (`src/positron/dev/asset_server.cr`):
       serves a directory from disk over HTTP on 127.0.0.1 with mime
       detection, SPA fallback and path-traversal protection.
 - [x] `Application#serve_directory(dir)` — dev counterpart of
@@ -65,44 +65,44 @@ Ordered by dependency and impact. Effort markers are rough:
 - [x] Served HTML is rewritten to match release builds: `{{CSS}}`,
       `{{JS}}`, `{{RUNTIME_JS}}`, `{{HYDRATE_JS}}` markers substituted
       from disk; plain SPAs get the runtime injected into `<head>`.
-- [x] `CRYSTAL_UI_DEV=1` switches one binary between embedded and
-      served assets (used by the `crystal-ui dev` scaffold).
+- [x] `POSITRON_DEV=1` switches one binary between embedded and
+      served assets (used by the `positron dev` scaffold).
 
 **1.2 Formalized Crystal → JS event bridge**
 
 - [x] `Host#emit_to_js(event, payload)` with main-thread marshalling.
 - [x] All plugins migrated off raw `eval_js` notify strings (also fixed
-      a bug where notifications called `CrystalUI.__crystalNotify`,
+      a bug where notifications called `Positron.__positronNotify`,
       which was only defined on `window`).
 
 **Done when:** a developer can edit HTML/CSS/JS and see changes in the
 running window without recompiling. ✅ verified by
-`crystal-ui init && crystal-ui dev`.
+`positron init && positron dev`.
 
 ---
 
 ### M2. CLI and typed bindings (M) — ✅ done (Linux)
 
-**2.1 `crystal-ui` executable** (`src/crystal_ui/cli.cr`, `rake build:cli`)
+**2.1 `positron` executable** (`src/positron/cli.cr`, `rake build:cli`)
 
-- [x] `crystal-ui init <name>` — scaffold: `shard.yml` (path dep on the
+- [x] `positron init <name>` — scaffold: `shard.yml` (path dep on the
       framework), `src/<name>.cr`, `src/frontend/`, icon, README.
-- [x] `crystal-ui dev` — rebuild when Crystal sources are stale, then
-      run with `CRYSTAL_UI_DEV=1` (live reload of frontend changes).
-- [x] `crystal-ui build` — release build with embedded assets.
-- [x] `crystal-ui doctor` — checks crystal, GTK, WebKitGTK, AppIndicator,
+- [x] `positron dev` — rebuild when Crystal sources are stale, then
+      run with `POSITRON_DEV=1` (live reload of frontend changes).
+- [x] `positron build` — release build with embedded assets.
+- [x] `positron doctor` — checks crystal, GTK, WebKitGTK, AppIndicator,
       libnotify, sqlite3, icon converter, appimagetool.
 
-**2.2 Binding generation** (`CrystalUI::BindingsGenerator`)
+**2.2 Binding generation** (`Positron::BindingsGenerator`)
 
 - [x] `@[Command]` methods expose manifests via the `command_registry`
       macro (arg names + types from signatures).
 - [x] TypeScript declarations generated from plugin + app manifests:
-      typed namespaces (`CrystalUI.fs.read(args: {path: string})`),
+      typed namespaces (`Positron.fs.read(args: {path: string})`),
       type mapping String→string, Int/Float→number, Bool→boolean.
-- [x] Written to `<frontend>/crystal-ui.d.ts` on every dev-server start.
+- [x] Written to `<frontend>/positron.d.ts` on every dev-server start.
 
-**Done when:** `crystal-ui init && crystal-ui dev` gives a working app
+**Done when:** `positron init && positron dev` gives a working app
 with hot reload and TS autocomplete. ✅
 
 ---
@@ -119,7 +119,7 @@ with hot reload and TS autocomplete. ✅
       unmaximized/fullscreened/unfullscreened`), forwarded to JS.
 - [x] Devtools: `open_devtools`/`close_devtools` (WebKitGTK inspector).
 - [x] `window` plugin exposing the whole surface to the frontend
-      (`CrystalUI.window.set_title(...)` etc.).
+      (`Positron.window.set_title(...)` etc.).
 - [~] Multi-window: **explicitly out of scope** per maintainer decision.
       If it ever lands, it changes the JS bridge envelope (window id) —
       decide before the M5 port, not after.
@@ -191,12 +191,12 @@ on macOS and Windows with feature parity for the M4 core plugins.
 
 ### M6. Packaging and distribution (M) — ✅ Linux done
 
-- [x] `CrystalUI::Packaging` (`src/crystal_ui/packaging.cr`):
+- [x] `Positron::Packaging` (`src/positron/packaging.cr`):
       `.desktop` entry rendering/install (user-local, no root),
       hicolor icon pipeline (rsvg-convert/ImageMagick, 16–512 px),
       AppDir scaffolding + appimagetool invocation, deb control
       templates.
-- [x] `crystal-ui package [--install]` ties it together (verified:
+- [x] `positron package [--install]` ties it together (verified:
       release build → icons → .desktop → AppDir).
 - [ ] AppImage end-to-end once appimagetool is available in the env.
 - [ ] Windows (NSIS) and macOS (.app/dmg) templates — after M5.
@@ -221,10 +221,10 @@ on macOS and Windows with feature parity for the M4 core plugins.
 
 - **Multi-window.** Dropped by maintainer decision; revisit only with a
   bridge-envelope design (window ids) done up front.
-- **Mobile (Android/iOS).** The architecture (`crystal-ui-architecture.md`
+- **Mobile (Android/iOS).** The architecture (`positron-architecture.md`
   §7–8) is sound; implement after the desktop story is complete.
 - **Hot reload of Crystal code inside a running process.** Rebuild+relaunch
-  (`crystal-ui dev`) is the pragmatic first step.
+  (`positron dev`) is the pragmatic first step.
 - **The full `plugins.txt` catalog.** Tier 2+ plugins come from real user
   demand; the core (M4) came first.
 - **Custom rendering / non-WebView UI.** The WebView is the product.

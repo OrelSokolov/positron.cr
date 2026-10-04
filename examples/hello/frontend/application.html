@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CrystalUI</title>
+  <title>Positron</title>
   <style>
 {{CSS}}
   </style>
@@ -15,7 +15,7 @@
 
   <main class="card">
     <div class="logo">{{ICON_HTML}}</div>
-    <h1>CrystalUI</h1>
+    <h1>Positron</h1>
     <p class="subtitle">
       Crystal Host owns state and logic.<br>
       WebKitGTK is just a thin native shim.
@@ -43,9 +43,9 @@
   </script>
   <script>
 {{HYDRATE_JS}};
-    document.body.setAttribute('data-theme', CrystalUI.state.settings.theme);
+    document.body.setAttribute('data-theme', Positron.state.settings.theme);
 
-    CrystalUI.on('state.settings.theme', function(theme) {
+    Positron.on('state.settings.theme', function(theme) {
       document.body.setAttribute('data-theme', theme);
     });
   </script>

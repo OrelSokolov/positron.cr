@@ -1,4 +1,4 @@
-# Contributing to CrystalUI
+# Contributing to Positron
 
 Thanks for your interest in contributing!
 
@@ -34,8 +34,8 @@ is considered done.
 - **Linux is the only working platform.** Windows, macOS, Android, iOS
   adapters exist as stubs — do not assume they work.
 - **Platform code stays behind ports.** Any GTK/WebKit/native call belongs
-  in `src/crystal_ui/adapters/linux/`, `src/crystal_ui/event_loop/linux.cr`
-  or `src/crystal_ui/plugins/*/linux.cr`. Core files (`host.cr`,
+  in `src/positron/adapters/linux/`, `src/positron/event_loop/linux.cr`
+  or `src/positron/plugins/*/linux.cr`. Core files (`host.cr`,
   `application.cr`, `command_registry.cr`, `event_bus.cr`,
   `state_manager.cr`, `js_facade_generator.cr`) must stay platform-pure —
   non-Linux ports depend on that.
@@ -50,14 +50,14 @@ is considered done.
 
 ## Adding a plugin
 
-1. Create `src/crystal_ui/plugins/<name>/plugin.cr` (subclass
-   `CrystalUI::Plugin`, define `name`, `supported_platforms`, `manifest`,
+1. Create `src/positron/plugins/<name>/plugin.cr` (subclass
+   `Positron::Plugin`, define `name`, `supported_platforms`, `manifest`,
    `bind`).
 2. Add platform adapters (`linux.cr`, plus stubs for other platforms) and
    a `factory.cr` that selects one at compile time via target flags.
 3. Register commands in `bind`, list them in `manifest`.
 4. Add a headless spec where possible (command dispatch, state handling).
-5. Wire the plugin require into `src/crystal_ui.cr` and, if it ships a
+5. Wire the plugin require into `src/positron.cr` and, if it ships a
    demo, an example under `examples/`.
 
 ## Commit style

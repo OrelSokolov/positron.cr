@@ -1,5 +1,5 @@
 #!/bin/sh
-# CrystalUI pre-commit hook: format check + specs.
+# Positron pre-commit hook: format check + specs.
 # Installed via `rake hooks:install` (sets git core.hooksPath to .githooks).
 #
 # Bypass for WIP commits:  git commit --no-verify
