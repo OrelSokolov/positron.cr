@@ -1,8 +1,116 @@
-:
-# Positron — Linux Reference Implementation
+# Positron — Wails for Crystal
 
-This repository contains a working Linux desktop implementation of the
+**Positron is a cross-platform UI framework for building desktop apps with a
+JS + CSS frontend and a Crystal backend** — the same idea as
+[Wails](https://wails.io) (Go) or Electron, but with Crystal instead, and
+without the Chromium/Node bundle: the OS WebView renders your frontend while
+all state and logic live in a single Crystal process.
+
+```crystal
+class MyApp < Positron::Application
+  @[Positron::Command]
+  def greet(name : String) : String
+    "Hello, #{name}!"
+  end
+
+  def on_ready
+    webview.create(Positron::WebViewConfig.new(title: "MyApp"))
+    webview.load_url("app://myapp/")
+  end
+end
+```
+
+- **Frontend:** plain HTML/CSS/JS (or any framework) rendered in the native
+  WebView.
+- **Backend:** Crystal — typed `@[Command]` methods callable from JS as
+  promises, events in both directions.
+- **Single binary:** assets are embedded at compile time; no runtime deps
+  beyond the OS WebView.
+- **Cross-platform by design:** all platform code sits behind ports and
+  adapters. **Linux (WebKitGTK) is fully working today**; macOS (WKWebView)
+  and Windows (WebView2) adapters are the next milestone — see the checklist
+  below and `ROADMAP.md`.
+
+This repository contains the reference implementation of the
 **Positron Host-Shim Pattern** described in `positron-architecture.md`.
+
+## Status checklist
+
+What is already there ✔ and what is still needed ☐:
+
+### Core framework
+
+- [x] Host core: `EventBus`, `CommandRegistry`, `StateManager`,
+      `PluginManager`, `DesktopHost`, GTK event loop + Crystal fibers
+- [x] WebView adapter (WebKitGTK 4.1): window API, devtools, drag & drop,
+      custom URI schemes
+- [x] System tray (Ayatana AppIndicator) with cross-platform tray API
+- [x] Compile-time asset embedding (`embed_directory` / `embed_file`) —
+      single-binary apps
+- [x] JS runtime facade (`Positron.call/on/emit/state`) + generated
+      TypeScript declarations (`positron.d.ts`)
+- [x] Crystal → JS event bridge (`Host#emit_to_js`, main-thread marshalling)
+- [x] Dev mode: asset server with live reload (`POSITRON_DEV=1`),
+      no recompiling for frontend changes
+- [x] Window management API (title/size/fullscreen/frameless/
+      always-on-top/min-max, window events in JS)
+- [x] `positron` CLI: `init` / `dev` / `build` / `doctor` / `package`
+- [x] Packaging: `.desktop` entries, hicolor icons, AppDir/AppImage, deb
+- [x] Headless test suite (48+ specs)
+- [ ] macOS adapter (WKWebView + NSStatusBar) — stub only
+- [ ] Windows adapter (WebView2 + NotifyIcon) — stub only
+- [ ] CI builds of real macOS/Windows adapters
+- [ ] macOS (.app/dmg) and Windows (NSIS) packaging templates
+- [ ] Documentation site / `docs/` tree, shard publishing, tagged releases
+
+### Plugins (Linux unless noted)
+
+- [x] Clipboard (text / image / files)
+- [x] Window control from JS
+- [x] Filesystem (XDG dirs, read/write/list, optional sandbox)
+- [x] Dialogs (native alert / confirm / prompt)
+- [x] File picker + save file dialog
+- [x] Notifications (libnotify, click callbacks)
+- [x] App lifecycle (`lifecycle.*` events)
+- [x] Deep links (single instance + URL forwarding)
+- [x] Permissions manager (desktop trust model, mobile-ready shape)
+- [x] Secure storage (AES-256-CBC + HMAC, PBKDF2)
+- [x] SQLite (direct FFI, opt-in)
+- [x] Theme / appearance (dark/light)
+- [x] Display info, keyboard events, logger, preferences
+- [ ] Local (scheduled) notifications with actions
+- [ ] Share sheet, badges, taskbar progress, global hotkeys, system sounds
+- [ ] Media & hardware plugins (camera, microphone, audio/video player,
+      geolocation, sensors, biometrics) — Tier 2+ in `plugins.txt`
+- [ ] Plugin ports to macOS / Windows (adapter-by-adapter with M5)
+
+### Mobile (non-goal for now)
+
+- [ ] Android / iOS hosts — architecture supports them, deliberately
+      deferred until the desktop story is complete
+
+## Platform support matrix
+
+Current status per platform: **Linux is fully working**, macOS and Windows
+adapters exist as compile-only stubs (M5 in `ROADMAP.md`; CI builds them to
+keep the ports honest). Legend: ✅ works · 🔶 stub (compiles, no
+implementation) · ❌ not implemented (planned).
+
+| Feature | Linux | macOS | Windows |
+|---|:---:|:---:|:---:|
+| **Core (host, EventBus, commands, plugins, StateManager)** — platform-pure | ✅ | ✅ | ✅ |
+| **JS facade + TS bindings generation** — platform-pure | ✅ | ✅ | ✅ |
+| **`positron` CLI (init/build/doctor)** | ✅ | ✅ | ✅ |
+| WebView surface | ✅ WebKitGTK 4.1 | 🔶 WKWebView stub | 🔶 WebView2 stub |
+| Event loop | ✅ GTK + fibers | 🔶 NSRunLoop stub | 🔶 Win32 stub |
+| System tray | ✅ AppIndicator | 🔶 NSStatusItem stub | 🔶 Shell_NotifyIcon stub |
+| Window management API (M3) | ✅ | ❌ | ❌ |
+| Custom URI schemes + embedded assets serving | ✅ | ❌ | ❌ |
+| Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ❌ | ❌ |
+| Devtools, drag & drop (`dnd.files`) | ✅ | ❌ | ❌ |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ❌ (port with M5) | ❌ (port with M5) |
+| Packaging | ✅ .desktop / AppImage / deb | ❌ .app/dmg after M5 | ❌ NSIS after M5 |
+| `positron package` | ✅ | ❌ | ❌ |
 
 ## Philosophy
 

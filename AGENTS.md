@@ -2,9 +2,17 @@
 
 ## What this is
 
-Positron is a **Linux-only reference implementation** of the Host-Shim
-pattern described in `positron-architecture.md`. Crystal owns all state
-and logic; the native shim (GTK/WebKitGTK) is a passive adapter.
+Positron is a **cross-platform UI framework for JS + CSS apps with a
+Crystal backend** — "Wails for Crystal" (see `README.md`). The frontend
+runs in the OS WebView; Crystal owns all state and logic; the native
+shim (GTK/WebKitGTK on Linux) is a passive adapter. Assets embed at
+compile time into a single binary.
+
+Currently a **Linux-only reference implementation** of the Host-Shim
+pattern described in `positron-architecture.md`: macOS/Windows adapters
+are stubs (M5 in `ROADMAP.md`). `README.md` carries a status checklist
+(done vs missing) — keep it in sync with the actual state when features
+land.
 
 ## Build & Test
 
