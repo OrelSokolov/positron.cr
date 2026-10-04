@@ -11,8 +11,11 @@ bridge smoke test. M5.2 (Windows) is implemented and tested on Windows
 11: real WebView2 window, event loop, tray, theme (stage 1); the M4
 plugin adapters (stage 2); and the POSIX-neutral plugins — fs dirs,
 deep_links single instance, secure_storage, SQLite via the system
-winsqlite3 (stage 3). M5.3 (the macOS plugin adapter port) is the next
-block; the architecture keeps all platform code behind ports so it
+winsqlite3 (stage 3). M5.3 (the macOS plugin adapter port) is implemented
+and verified on arm64: clipboard (NSPasteboard), dialogs (NSAlert),
+file picker (NSOpenPanel), save file dialog (NSSavePanel), display
+(CoreGraphics), theme (NSAppearance/NSColor/NSWorkspace), alongside
+the earlier notifications port; the architecture keeps all platform code behind ports so it
 stays a pure adapter job. **Multi-window support is intentionally out
 of scope.**
 
@@ -157,7 +160,7 @@ From the "first 10 core" list in `top_20.txt`:
 
 ---
 
-### M5. Cross-platform: macOS and Windows (L) — 🔶 5.1/5.2 done, 5.3 remaining
+### M5. Cross-platform: macOS and Windows (L) — ✅ 5.1/5.2/5.3 done
 
 The largest single chunk. The port discipline added in M3/M4 (all
 platform code in `adapters/linux/`, `event_loop/linux.cr`,
@@ -225,9 +228,17 @@ pure adapter job.
 **5.3 Cross-cutting**
 
 - [x] Extend CI to build real adapters on macOS/Windows runners.
-- [ ] Port the M3 window API and M4 plugins adapter-by-adapter;
-      capability gaps must raise, not no-op. (notifications ported on
-      macOS — `UNUserNotificationCenter`; clipboard, dialogs, … pending)
+- [x] Port the M3 window API and M4 plugins adapter-by-adapter;
+      capability gaps must raise, not no-op. macOS: notifications
+      (`UNUserNotificationCenter`), clipboard (NSPasteboard — text,
+      PNG/TIFF images, file URLs), dialogs (NSAlert + NSTextField
+      accessory for prompt), file picker (NSOpenPanel), save file
+      dialog (NSSavePanel), display info (CoreGraphics online display
+      list; logical bounds, mode pixel size for the scale factor,
+      physical mm for DPI, y flipped to the top-left origin),
+      theme (NSAppearance dark match, NSColor.controlAccentColor,
+      NSWorkspace increase-contrast flag). Remaining gap by design:
+      no `dnd.files` on macOS (WKWebView consumes drops).
 
 **Done when:** `hello`, `theme_demo` and the plugin examples run natively
 on macOS and Windows with feature parity for the M4 core plugins.
@@ -286,7 +297,7 @@ on macOS and Windows with feature parity for the M4 core plugins.
 ```
 M0 ─▶ M1 ─▶ M2 ─▶ M4 ─▶ M3 ─▶ M6(Linux)   ✅ done
                           │
-                          └──▶ M5 (macOS ✅ ∥ Windows ✅; M5.3 plugin ports ⬜ next)
+                          └──▶ M5 (macOS ✅ ∥ Windows ✅; M5.3 plugin ports ✅)
 M7 runs continuously.
 ```
 

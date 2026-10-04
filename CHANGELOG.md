@@ -8,6 +8,25 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- All remaining macOS plugin adapter ports (M5.3), driven through the
+  pure-Crystal ObjC runtime layer (`adapters/macos/objc.cr`):
+  clipboard (`NSPasteboard` — text, PNG/TIFF image data, file URLs via
+  `readObjectsForClasses:`; image writes go through an
+  `NSPasteboardItem` with raw `setData:forType:` bytes), dialogs
+  (`NSAlert` + an `NSTextField` accessory view for prompt, window
+  title mapped from the `title` argument), file picker (`NSOpenPanel`,
+  `accept` translated to extensions incl. common MIME types),
+  save file dialog (`NSSavePanel`), display info (CoreGraphics online
+  display list — logical bounds, current-mode pixel size for the scale
+  factor, physical mm for DPI, y flipped to the top-left origin,
+  refresh rate from the display mode) and theme (dark mode via
+  `NSAppearance bestMatch`, accent color from
+  `NSColor.controlAccentColor` converted to sRGB, high-contrast flag
+  from `NSWorkspace`). ObjC layer gained `send1_i`/`send2_b` helpers,
+  `ObjC::Call#ret_f64` (CGFloat returns) and `LibCF.CFRelease`.
+  Verified on arm64 (text/image clipboard round-trip, theme accent
+  `#007AFF`, Retina `scale_factor: 2.0`); specs for the file picker
+  `accept` filter.
 - macOS host support in `crosspack`: `darwin:` stub rules for the
   Linux-only GTK/WebKitGTK/AppIndicator/libnotify host deps (the macOS
   adapters use the system frameworks) and a `macos` matrix entry

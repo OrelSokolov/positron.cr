@@ -29,8 +29,9 @@ end
   beyond the OS WebView.
 - **Cross-platform by design:** all platform code sits behind ports and
   adapters. **Linux (WebKitGTK), macOS (WKWebView) and Windows (WebView2)
-  are fully working today** — of the macOS plugin adapters only
-  notifications is ported, the rest are stubs;
+  are fully working today** — all macOS plugin adapters are ported too
+  (drag & drop of files remains unavailable on macOS, WKWebView consumes
+  drops with no public hook);
   see the checklist below and `ROADMAP.md`.
 
 This repository contains the reference implementation of the
@@ -67,8 +68,11 @@ What is already there ✔ and what is still needed ☐:
       adapters and the POSIX-neutral plugins (fs dirs, deep_links over
       AF_UNIX, secure_storage, SQLite via the system winsqlite3) — see
       `CHANGELOG.md` for details
-- [~] macOS plugin adapter ports (notifications done; clipboard, dialogs,
-      … still stubs) — M5.3
+- [x] macOS plugin adapter ports (M5.3 done): notifications
+      (UNUserNotificationCenter), clipboard (NSPasteboard), dialogs
+      (NSAlert), file picker (NSOpenPanel), save file dialog
+      (NSSavePanel), display info (CoreGraphics), theme
+      (NSAppearance/NSColor/NSWorkspace)
 - [ ] macOS dmg packaging templates (.app bundling + codesign is done)
 - [ ] Documentation site / `docs/` tree, shard publishing, tagged releases
 
@@ -96,8 +100,6 @@ What is already there ✔ and what is still needed ☐:
 - [ ] Share sheet, badges, taskbar progress, global hotkeys, system sounds
 - [ ] Media & hardware plugins (camera, microphone, audio/video player,
       geolocation, sensors, biometrics) — Tier 2+ in `plugins.txt`
-- [ ] Plugin ports to macOS (adapter-by-adapter with M5.3; notifications
-      done)
 
 ### Mobile (non-goal for now)
 
@@ -107,8 +109,8 @@ What is already there ✔ and what is still needed ☐:
 ## Platform support matrix
 
 Current status per platform: **Linux, macOS and Windows are working**;
-on macOS the plugin adapters are stubs except notifications (ported) —
-they port with M5.3 in `ROADMAP.md`. Legend: ✅ works · 🔶 stub
+on macOS all plugin adapters are ported (`dnd.files` is not possible
+there — WKWebView consumes file drops with no public hook). Legend: ✅ works · 🔶 stub
 (compiles, no implementation) · ❌ not implemented (planned).
 
 | Feature | Linux | macOS | Windows |
@@ -124,7 +126,7 @@ they port with M5.3 in `ROADMAP.md`. Legend: ✅ works · 🔶 stub
 | Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ✅ | ✅ |
 | Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) |
 | Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ |
-| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | 🔶 (notifications ✅; rest with M5.3) | ✅ |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ |
 | Packaging | ✅ .desktop / AppImage / deb | ✅ .app + codesign (dmg pending) | ✅ MSI via `crosspack pack` |
 | `positron package` | ✅ | ✅ (`.app`; `MACOS_SIGN_IDENTITY`, `MACOS_BUNDLE_ID`) | ❌ (use `crosspack pack`) |
 

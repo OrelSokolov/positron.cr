@@ -93,9 +93,17 @@ module Positron
           (send1(recv, cmd, a1).address & 0xFF) != 0
         end
 
+        def send2_b(recv : Void*, cmd : Void*, a1 : Void*, a2 : Void*) : Bool
+          (send2(recv, cmd, a1, a2).address & 0xFF) != 0
+        end
+
         # NSInteger/NSUInteger returns occupy the full return register.
         def send0_i(recv : Void*, cmd : Void*) : Int64
           send0(recv, cmd).address.to_i64
+        end
+
+        def send1_i(recv : Void*, cmd : Void*, a1 : Void*) : Int64
+          send1(recv, cmd, a1).address.to_i64
         end
 
         # Method dispatch with a typed NSRect first argument — see
@@ -276,6 +284,13 @@ module Positron
           buffer.value
         end
 
+        # CGFloat / double returns (e.g. NSColor component getters).
+        def ret_f64 : Float64
+          buffer = Pointer(Float64).malloc(1)
+          ObjC.send1(@invocation, ObjC.sel("getReturnValue:"), buffer.as(Void*))
+          buffer.value
+        end
+
         def ret_rect : LibObjC::NSRect
           buffer = Pointer(LibObjC::NSRect).malloc(1)
           ObjC.send1(@invocation, ObjC.sel("getReturnValue:"), buffer.as(Void*))
@@ -388,6 +403,7 @@ module Positron
 
       @[Link(framework: "CoreFoundation")]
       lib LibCF
+        fun CFRelease(cf : Void*)
         fun CFRunLoopGetMain : Void*
         fun CFRunLoopStop(run_loop : Void*) : Nil
         fun CFRunLoopWakeUp(run_loop : Void*) : Nil

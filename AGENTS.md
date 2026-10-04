@@ -15,9 +15,10 @@ uses GTK/WebKitGTK, macOS uses WKWebView/NSWindow/NSStatusItem through a
 pure-Crystal Objective-C runtime layer (`adapters/macos/objc.cr` — see the
 header comment there for the dispatch-strategy constraints of Crystal's
 one-declaration-per-C-symbol rule), Windows uses WebView2 via the
-vendored `webview.dll` (`adapters/windows/`). The macOS plugin adapters
-(clipboard etc.) are still stubs except notifications (M5.3 in
-`ROADMAP.md`).
+vendored `webview.dll` (`adapters/windows/`). The macOS plugin
+adapters are all real ports (notifications, clipboard, dialogs,
+file_picker, save_file_dialog, display, theme — M5.3 in `ROADMAP.md`,
+driven through the pure-Crystal ObjC runtime layer).
 `README.md` carries a status checklist (done vs missing) — keep it in sync
 with the actual state when features land.
 
@@ -121,11 +122,13 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 
 - **Linux, macOS (arm64) and Windows are the working platforms.** Linux
   is the reference platform. macOS: real WKWebView/NSWindow/NSStatusItem
-  adapters (M5.1) — the macOS *plugin* adapters (clipboard, dialogs, …)
-  are stubs except notifications (real `UNUserNotificationCenter` port —
-  see the header of `plugins/notifications/macos.cr`; bare dev binaries
-  fall back to `osascript display notification` automatically), do not assume
-  the rest work. Windows (M5.2 stage 1:
+  adapters (M5.1) and real plugin adapters (M5.3): notifications
+  (`UNUserNotificationCenter` — see the header of
+  `plugins/notifications/macos.cr`; bare dev binaries fall back to
+  `osascript display notification` automatically), clipboard
+  (NSPasteboard), dialogs (NSAlert), file_picker (NSOpenPanel),
+  save_file_dialog (NSSavePanel), display (CoreGraphics C API) and
+  theme (NSAppearance/NSColor/NSWorkspace). Windows (M5.2 stage 1:
   WebView2 window + JS bridge + event loop + tray + theme via the
   vendored `third_party/webview/webview.dll`, loaded at runtime — keep
   the DLL next to the exe or under `third_party/webview/`; stage 2:
@@ -184,9 +187,8 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   (F12 works when running with `POSITRON_DEV=1`). Deep-link scheme
   *registration* (registry keys) is a packaging concern on Windows,
   like `.desktop` on Linux.
-- macOS plugin adapters (clipboard, dialogs, …) are stubs — port with
-  M5.3 (notifications is done). No `dnd.files` on macOS: WKWebView
-  consumes file drops with no public hook.
+- No `dnd.files` on macOS: WKWebView consumes file drops with no
+  public hook.
 - No mobile entry points (`src/positron/entry/`).
 - Multi-window is intentionally out of scope.
 - Many Tier-2+ plugins from `plugins.txt` are not yet implemented.
