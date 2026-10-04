@@ -48,6 +48,8 @@ build:
           install: sudo pacman -S --needed gtk3
         windows:
           verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
+        darwin:
+          verify: exit 0 # macOS adapter uses the system AppKit — no GTK stack
         "*":
           verify: pkg-config --exists gtk+-3.0
 
@@ -64,6 +66,8 @@ build:
           install: sudo pacman -S --needed webkit2gtk-4.1
         windows:
           verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
+        darwin:
+          verify: exit 0 # macOS adapter uses the system WebKit — no WebKitGTK
         "*":
           verify: pkg-config --exists webkit2gtk-4.1
 
@@ -80,6 +84,8 @@ build:
           install: sudo pacman -S --needed libayatana-appindicator
         windows:
           verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
+        darwin:
+          verify: exit 0 # macOS adapter uses NSStatusItem — no AppIndicator
         "*":
           verify: pkg-config --exists ayatana-appindicator3-0.1
 
@@ -96,6 +102,8 @@ build:
           install: sudo pacman -S --needed libnotify
         windows:
           verify: exit 0 # stubs-only build — the GTK stack is not linked on Windows
+        darwin:
+          verify: exit 0 # macOS notifications use UNUserNotificationCenter
         "*":
           verify: pkg-config --exists libnotify
 
@@ -132,6 +140,24 @@ build:
         include: ["*.exe", "*.dll"]
         to: [windows-11.0]
         mode: copy
+
+    # macOS (arm64) builds the real WKWebView/NSStatusItem adapters and
+    # the UNUserNotificationCenter notifications plugin against the
+    # system frameworks — no pkg-config stack (see the darwin host rules
+    # above). crystal build drops *.dwarf debug files next to the
+    # binaries; they are removed so they stay out of the artifacts.
+    - id: macos
+      build: darwin/arm64
+      steps:
+        - crystal spec          # specs must pass — same gate as CI
+        - rake build:cli        # bin/positron
+        - rake build:examples   # examples/<name>/<name>, logs to logs/
+        - rm -f examples/*/*.dwarf bin/*.dwarf
+        - cp examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
+      artifacts:
+        from: bin
+        include: ["*"]
+        to: [macos]
 
 # Distribution: what `crosspack pack` ships — the positron CLI plus the
 # example apps and the runtime DLLs they need (Windows flat under

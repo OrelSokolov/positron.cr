@@ -8,6 +8,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- macOS host support in `crosspack`: `darwin:` stub rules for the
+  Linux-only GTK/WebKitGTK/AppIndicator/libnotify host deps (the macOS
+  adapters use the system frameworks) and a `macos` matrix entry
+  (darwin/arm64) in `crosspack build`, fanning the CLI and all example
+  binaries into `builds/macos/` (debug `.dwarf` files stripped).
 - Real macOS notifications adapter (first M5.3 plugin port):
   `UNUserNotificationCenter` driven through the pure-Crystal ObjC layer —
   permission request/check, send/clear by id, click callbacks via a

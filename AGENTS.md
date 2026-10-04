@@ -41,8 +41,10 @@ Build orchestration lives in `crosspack.yml` (the [crosspack](https://rubygems.o
 gem, Ruby >= 3.2): `crosspack deps` verifies/installs the build-host
 dependencies, `crosspack build` runs specs + CLI + all examples and fans
 the binaries into `builds/<target>/`. On a Windows host `crosspack build`
-runs the `windows` matrix entry with the real M5.2 adapters (the
-GTK/WebKitGTK host deps verify as satisfied — they are Linux-only).
+runs the `windows` matrix entry with the real M5.2 adapters; on a macOS
+host the `macos` matrix entry (darwin/arm64) builds the real WKWebView
+adapters — the GTK/WebKitGTK host deps verify as satisfied on both
+(Linux-only stacks, covered by `darwin:`/`windows:` stub rules).
 `crosspack pack` packages the built artifacts per the `package:` section:
 an MSI via WiX on Windows (`wix` from `dotnet tool install -g wix`),
 deb/rpm on Linux. Keep the `version:` in `crosspack.yml` in sync
