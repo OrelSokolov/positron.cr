@@ -160,6 +160,10 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   `on_ready`. Use it for adapter callbacks (e.g. notification clicks).
 - The JS bridge envelope: `{"type":"command","id","name","args"}`.
   Responses go back via `window.__positronResolve(id, success, data, error)`.
+- `Host#dispatch` is async by default: the handler runs in a fiber and
+  the resolve is marshalled to the GUI thread; `Host#dispatch_now` is
+  the synchronous variant for tests. Prefer `CommandResult.raw_json`
+  to serialize a handler result exactly once.
 - **Never hand-roll `eval_js` strings to push events to the frontend** —
   use `Host#emit_to_js(event, payload)`.
 - Examples use `embed_application_files(__DIR__, icon_path)` to bake
@@ -177,6 +181,11 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   when the *user* closes the window; return false to veto. Wired by
   `DesktopHost` into `WebViewPort#before_close` (`#allow_close?`);
   `Host#stop` never consults it.
+- `WebViewConfig#frameless` (Linux): undecorated window + CSS-drag —
+  `--positron-drag: drag` on an element makes it a move handle,
+  `no-drag` stops the ancestor walk; dblclick on a handle toggles
+  maximize. Hit-test is a synchronous JSC eval in the button-press
+  handler (`webkit_gtk.cr`, `draggable_at?`).
 - Dev mode: `Application#serve_directory(dir)` serves the frontend from
   disk with live reload; `POSITRON_DEV=1` switches one binary between
   served and embedded assets (this is what `positron dev` sets).

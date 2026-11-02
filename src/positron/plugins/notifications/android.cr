@@ -7,7 +7,8 @@ module Positron::Plugins
   # A real implementation would call `NotificationManager` through the
   # JNI bridge in the Android shim.
   class AndroidNotificationsAdapter < NotificationsAdapter
-    def send(id : String, title : String, body : String) : String
+    def send(id : String, title : String, body : String,
+                     actions : Array({String, String}) = [] of {String, String}) : String
       Log.for("positron.plugins.notifications").warn { "Android notifications not yet implemented" }
       id
     end

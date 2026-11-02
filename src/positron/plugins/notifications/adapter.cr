@@ -8,11 +8,18 @@ module Positron::Plugins
   # EventBus as `notification.clicked` events.
   abstract class NotificationsAdapter
     alias ClickHandler = Proc(String, Nil)
+    # (notification_id, action_id)
+    alias ActionHandler = Proc(String, String, Nil)
 
     @click_handler : ClickHandler?
+    @action_handler : ActionHandler?
 
-    # Send a notification. Returns the id used to reference it later.
-    abstract def send(id : String, title : String, body : String) : String
+    # Send a notification. `actions` is a list of {action_id, label}
+    # button pairs shown with the notification (platform support varies;
+    # adapters ignore unsupported actions). Returns the id used to
+    # reference it later.
+    abstract def send(id : String, title : String, body : String,
+                      actions : Array({String, String}) = [] of {String, String}) : String
 
     # Clear (close) a previously shown notification by id.
     abstract def clear(id : String) : Bool
@@ -28,9 +35,19 @@ module Positron::Plugins
       @click_handler = block
     end
 
+    def on_action(&block : ActionHandler)
+      @action_handler = block
+    end
+
     protected def emit_click(id : String)
       if handler = @click_handler
         handler.call(id)
+      end
+    end
+
+    protected def emit_action(id : String, action : String)
+      if handler = @action_handler
+        handler.call(id, action)
       end
     end
   end

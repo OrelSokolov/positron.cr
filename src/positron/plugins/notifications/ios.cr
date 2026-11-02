@@ -7,7 +7,8 @@ module Positron::Plugins
   # A real implementation would bridge to `UNUserNotificationCenter` through
   # the C-ABI/Swift shim on iOS.
   class IOSNotificationsAdapter < NotificationsAdapter
-    def send(id : String, title : String, body : String) : String
+    def send(id : String, title : String, body : String,
+                     actions : Array({String, String}) = [] of {String, String}) : String
       Log.for("positron.plugins.notifications").warn { "iOS notifications not yet implemented" }
       id
     end

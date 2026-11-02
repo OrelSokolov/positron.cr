@@ -86,6 +86,15 @@ module Positron::Plugins
         ),
         "window.open_devtools"  => Positron::CommandManifest.new(name: "window.open_devtools"),
         "window.close_devtools" => Positron::CommandManifest.new(name: "window.close_devtools"),
+        # Reload the frontend (location.reload from the page context —
+        # works on every platform, no adapter support needed).
+        "window.reload" => Positron::CommandManifest.new(name: "window.reload"),
+        # Evaluate arbitrary JavaScript in the frontend (Wails
+        # WindowExecJS analogue).
+        "window.exec_js" => Positron::CommandManifest.new(
+          name: "window.exec_js",
+          args: [Positron::ArgumentManifest.new(name: "script", type: "String")],
+        ),
       }
     end
 
@@ -178,6 +187,16 @@ module Positron::Plugins
 
       register registry, "window.close_devtools" do |webview, _args|
         webview.close_devtools
+        void
+      end
+
+      register registry, "window.reload" do |webview, _args|
+        webview.eval_js("location.reload()")
+        void
+      end
+
+      register registry, "window.exec_js" do |webview, args|
+        webview.eval_js(arg_string(args, "script"))
         void
       end
     end

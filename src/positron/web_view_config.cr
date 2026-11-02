@@ -7,6 +7,11 @@ module Positron
     icon : IconSource? = nil,
     transparent : Bool = false,
     resizable : Bool = true,
+    # Frameless window: no title bar / borders. Enables CSS-drag —
+    # elements with the `--positron-drag: drag` custom CSS property
+    # become drag handles (double-click on a handle toggles maximize),
+    # mirroring the Wails `--wails-draggable` mechanism. Linux only.
+    frameless : Bool = false,
     # true  → the close button hides the window (tray-style apps bring it
     #         back via `show`); the default keeps existing apps working.
     # false → the close button quits the event loop (apps without a tray).

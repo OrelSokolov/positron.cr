@@ -95,7 +95,8 @@ module Positron::Plugins
       install_imps
     end
 
-    def send(id : String, title : String, body : String) : String
+    def send(id : String, title : String, body : String,
+                     actions : Array({String, String}) = [] of {String, String}) : String
       center = notification_center
       if center.nil? || center.null?
         script_send(title, body)

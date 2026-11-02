@@ -19,13 +19,23 @@ module Positron::Plugins
       LibNotify.notify_uninit
     end
 
-    def send(id : String, title : String, body : String) : String
+    def send(id : String, title : String, body : String,
+             actions : Array({String, String}) = [] of {String, String}) : String
       notification = LibNotify.notify_notification_new(title, body, Pointer(LibC::Char).null)
 
-      # Keep the callback alive for the lifetime of the adapter.
-      @action_callback ||= ->(_notification : Void*, _action : LibC::Char*, data : Void*) do
+      # Keep the callbacks alive for the lifetime of the adapter.
+      @action_callback ||= ->(notification : Void*, action : LibC::Char*, data : Void*) do
         notification_id = String.new(data.as(LibC::Char*))
-        EventBus.emit("notification.clicked", {id: notification_id})
+        action_name = String.new(action)
+        if action_name == "default"
+          # Body click: both the Crystal-facing EventBus and the
+          # JS-facing plugin handler (emit_to_js) get it.
+          EventBus.emit("notification.clicked", {id: notification_id})
+          emit_click(notification_id)
+        else
+          EventBus.emit("notification.action", {id: notification_id, action: action_name})
+          emit_action(notification_id, action_name)
+        end
       end
 
       # Store the id as a null-terminated C string so libnotify can pass it
@@ -40,6 +50,19 @@ module Positron::Plugins
         id_ptr.as(Void*),
         Pointer(Void).null
       )
+
+      # Custom action buttons; libnotify passes the action key back as
+      # the second callback argument.
+      actions.each do |action_id, label|
+        LibNotify.notify_notification_add_action(
+          notification,
+          action_id,
+          label,
+          @action_callback.not_nil!.pointer.as(Void*),
+          id_ptr.as(Void*),
+          Pointer(Void).null
+        )
+      end
 
       LibNotify.notify_notification_show(notification, Pointer(Pointer(Void)).null)
       @active[id] = notification

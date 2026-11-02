@@ -45,6 +45,9 @@ What is already there ✔ and what is still needed ☐:
 
 - [x] Host core: `EventBus`, `CommandRegistry`, `StateManager`,
       `PluginManager`, `DesktopHost`, GTK event loop + Crystal fibers
+- [x] Async command dispatch: handlers run in fibers off the GUI
+      thread, promise resolve marshalled back via `run_on_main`
+      (`Host#dispatch`; `dispatch_now` for synchronous use)
 - [x] WebView adapter (WebKitGTK 4.1): window API, devtools, drag & drop,
       custom URI schemes
 - [x] System tray (Ayatana AppIndicator) with cross-platform tray API
@@ -57,6 +60,9 @@ What is already there ✔ and what is still needed ☐:
       no recompiling for frontend changes
 - [x] Window management API (title/size/fullscreen/frameless/
       always-on-top/min-max, window events in JS)
+- [x] Frameless windows + CSS-drag (`--positron-drag: drag`,
+      Wails `--wails-draggable` analogue; Linux)
+- [x] Dev error overlay + STDERR duplication (dev asset server)
 - [x] Close-veto hook (`Application#on_before_close`, Wails
       `OnBeforeClose` analogue): return false to keep the window open;
       user-initiated close only — `Host#stop` bypasses it (Linux/macOS/

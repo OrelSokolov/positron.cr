@@ -44,7 +44,8 @@ module Positron::Plugins
       create_window
     end
 
-    def send(id : String, title : String, body : String) : String
+    def send(id : String, title : String, body : String,
+                     actions : Array({String, String}) = [] of {String, String}) : String
       ensure_icon
 
       data = base_data

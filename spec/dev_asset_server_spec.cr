@@ -40,6 +40,25 @@ describe Positron::Dev::AssetServer do
     end
   end
 
+  it "injects the dev error overlay into every HTML page" do
+    with_frontend_dir do |dir|
+      server = Positron::Dev::AssetServer.new(
+        dir,
+        runtime_provider: -> { ["window.__testRuntime = 1;"] },
+      ) { }
+
+      server.start
+      body, _mime = get(server, "/index.html")
+
+      body.should contain("__positronDevOverlay")
+      body.should contain("dev.error")
+      # overlay lands inside <head>, before the body content
+      ((body.index("__positronDevOverlay").not_nil!) < (body.index("<h1>").not_nil!)).should be_true
+
+      server.stop
+    end
+  end
+
   it "falls back to index.html for extensionless SPA routes" do
     with_frontend_dir do |dir|
       server = start_server(dir)

@@ -20,8 +20,10 @@ module Positron
         @message_handler : Proc(Void*, Void*, Void*, Nil)?
         @delete_handler : Proc(Void*, Void*, Void*, Int32)?
         @configure_handler : Proc(Void*, Void*, Void*, Int32)?
+        @press_handler : Proc(Void*, Void*, Void*, Int32)?
         @drag_handler : Proc(Void*, Void*, Int32, Int32, Void*, UInt32, UInt32, Void*, Nil)?
         @close_to_tray : Bool = true
+        @frameless : Bool = false
         @last_size : {Int32, Int32} = {-1, -1}
         @last_position : {Int32, Int32} = {-1, -1}
         @last_maximized : Bool = false
@@ -44,6 +46,7 @@ module Positron
           @window = LibGTK.gtk_window_new(0) # GTK_WINDOW_TOPLEVEL
           LibGTK.gtk_window_set_title(@window, config.title)
           LibGTK.gtk_window_set_default_size(@window, config.width, config.height)
+          LibGTK.gtk_window_set_decorated(@window, 0) if config.frameless
 
           if icon = config.icon
             icon_path = write_temp_icon(icon)
@@ -56,6 +59,7 @@ module Positron
           # tray "Open" action can bring the window back — unless the app
           # opted out with WebViewConfig#close_to_tray=false (no tray).
           @close_to_tray = config.close_to_tray
+          @frameless = config.frameless
           @delete_handler = ->(widget : Void*, event : Void*, data : Void*) do
             webkit = Box(WebKitGTK).unbox(data)
             if webkit.allow_close?
@@ -84,6 +88,8 @@ module Positron
           @user_content_manager = LibWebKit.webkit_web_view_get_user_content_manager(@web_view)
 
           LibGTK.gtk_container_add(@window, @web_view)
+
+          connect_frameless_drag if @frameless
         end
 
         def load_url(url : String)
@@ -154,6 +160,92 @@ module Positron
         protected def close_to_tray? : Bool
           @close_to_tray
         end
+
+        # --- Frameless CSS-drag (Wails --wails-draggable analogue) ---
+
+        GDK_BUTTON_PRESS    = 4
+        GDK_2BUTTON_PRESS   = 5
+
+        # Connects the button-press hook for CSS-driven window dragging:
+        # a press on an element whose computed style (or an ancestor's)
+        # carries `--positron-drag: drag` starts a native window move;
+        # a double-click on such a handle toggles maximize. The DOM
+        # hit-test runs synchronously through the JSC C API so the drag
+        # begins while the button is still held (no async bridge hop).
+        private def connect_frameless_drag : Nil
+          @press_handler = ->(widget : Void*, event : Void*, data : Void*) do
+            webkit = Box(WebKitGTK).unbox(data)
+            webkit.handle_frameless_press(event)
+            0 # FALSE — let the page see the press too
+          end
+
+          LibGObject.g_signal_connect_data(
+            @web_view,
+            "button-press-event",
+            @press_handler.not_nil!.pointer.as(Void*),
+            Box.box(self),
+            nil,
+            0
+          )
+        end
+
+        protected def handle_frameless_press(event_ptr : Void*) : Nil
+          event = event_ptr.as(GdkEventButton*)
+          return unless event.value.button == 1
+
+          case event.value.type
+          when GDK_BUTTON_PRESS
+            return unless draggable_at?(event.value.x, event.value.y)
+            LibGTK.gtk_window_begin_move_drag(
+              @window, 1,
+              event.value.x_root.to_i32, event.value.y_root.to_i32,
+              event.value.time
+            )
+          when GDK_2BUTTON_PRESS
+            return unless draggable_at?(event.value.x, event.value.y)
+            maximized? ? unmaximize : maximize
+          end
+        end
+
+        # Synchronous DOM hit-test: does the element at (x, y) (or one of
+        # its ancestors) carry `--positron-drag: drag`?
+        private def draggable_at?(x : Float64, y : Float64) : Bool
+          context = LibWebKit.webkit_web_view_get_javascript_global_context(@web_view)
+          return false if context.null?
+
+          script = HIT_TEST_SCRIPT % {x.to_i, y.to_i}
+          source = LibJSC.JSStringCreateWithUTF8CString(script)
+          value = LibJSC.JSEvaluateScript(
+            context, source, Pointer(Void).null, Pointer(Void).null, 0,
+            Pointer(Void).null.as(Void**))
+          LibJSC.JSStringRelease(source)
+          return false if value.null?
+
+          string = LibJSC.JSValueToStringCopy(
+            context, value, Pointer(Void).null.as(Void**))
+          return false if string.null?
+
+          buffer = Pointer(LibC::Char).malloc(8)
+          LibJSC.JSStringGetUTF8CString(string, buffer, 8)
+          LibJSC.JSStringRelease(string)
+          String.new(buffer) == "drag"
+        end
+
+        # Walks from the topmost element at (x, y) up the DOM; the first
+        # explicit `--positron-drag` value decides ("drag" = handle,
+        # "no-drag" = stop, like Wails).
+        HIT_TEST_SCRIPT = <<-JS
+          (function(){
+            var el = document.elementFromPoint(%d, %d);
+            while (el && el !== document.documentElement) {
+              var v = getComputedStyle(el).getPropertyValue('--positron-drag').trim();
+              if (v === 'drag') return 'drag';
+              if (v === 'no-drag') return 'no';
+              el = el.parentElement;
+            }
+            return 'no';
+          })()
+          JS
 
         protected def quit_event_loop
           LibGTK.gtk_main_quit
@@ -477,6 +569,7 @@ module Positron
           fun gtk_window_unfullscreen(window : Void*)
           fun gtk_window_set_keep_above(window : Void*, setting : Int32)
           fun gtk_window_set_decorated(window : Void*, setting : Int32)
+          fun gtk_window_begin_move_drag(window : Void*, button : Int32, root_x : Int32, root_y : Int32, timestamp : UInt32)
           fun gtk_window_present(window : Void*)
           fun gtk_container_add(container : Void*, widget : Void*)
           fun gtk_drag_dest_set(widget : Void*, flags : Int32, targets : Void*, n_targets : Int32, actions : UInt32)
@@ -522,6 +615,7 @@ module Positron
           fun webkit_web_inspector_close(inspector : Void*)
           fun webkit_web_inspector_get_web_view(inspector : Void*) : Void*
           fun webkit_web_context_get_default : Void*
+          fun webkit_web_view_get_javascript_global_context(web_view : Void*) : Void*
           fun webkit_web_context_register_uri_scheme(context : Void*, scheme : LibC::Char*, callback : Void*, user_data : Void*, destroy_notify : Void*)
           fun webkit_uri_scheme_request_get_uri(request : Void*) : LibC::Char*
           fun webkit_uri_scheme_request_get_path(request : Void*) : LibC::Char*
@@ -536,6 +630,27 @@ module Positron
         @[Link("javascriptcoregtk-4.1")]
         lib LibJSC
           fun jsc_value_to_json(value : Void*, indent : UInt32) : LibC::Char*
+          fun JSStringCreateWithUTF8CString(cstr : LibC::Char*) : Void*
+          fun JSStringRelease(string : Void*)
+          fun JSEvaluateScript(ctx : Void*, script : Void*, this_object : Void*, source_url : Void*, starting_line_number : Int32, exception : Void**) : Void*
+          fun JSValueToStringCopy(ctx : Void*, value : Void*, exception : Void**) : Void*
+          fun JSStringGetUTF8CString(string : Void*, buffer : LibC::Char*, buffer_size : LibC::SizeT) : LibC::SizeT
+        end
+
+        # Prefix of GdkEventButton up to the fields CSS-drag needs
+        # (x/y are page coordinates, x_root/y_root screen coordinates).
+        struct GdkEventButton
+          getter type, send_event, time, x, y, state, button, x_root, y_root
+
+          def initialize(@type : Int32, @window : Void*, @send_event : Int8,
+                         @time : UInt32, @x : Float64, @y : Float64,
+                         @axes : Float64*, @state : UInt32, @button : UInt32,
+                         @device : Void*, @x_root : Float64, @y_root : Float64)
+          end
+
+          @window : Void*
+          @axes : Float64*
+          @device : Void*
         end
 
         @[Link("glib-2.0")]

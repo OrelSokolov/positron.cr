@@ -42,6 +42,51 @@ module Positron
       MIME_TYPES[ext]? || "application/octet-stream"
     end
 
+    # Injected into every HTML page served by the dev asset server:
+    # catches window.onerror / unhandledrejection, renders a floating
+    # red overlay and forwards the error to the host as a "dev.error"
+    # bridge event (the host duplicates it to STDERR). Release builds
+    # never see this script.
+    OVERLAY_JS = <<-JS
+      (function(){
+        if (window.__positronDevOverlay) return; window.__positronDevOverlay = true;
+        function post(payload) {
+          try {
+            if (window.PositronBridge)
+              PositronBridge.postMessage(JSON.stringify({type:'event',event:'dev.error',payload:payload}));
+          } catch (e) {}
+        }
+        function show(msg, detail) {
+          var box = document.getElementById('__positron_overlay');
+          if (!box) {
+            box = document.createElement('div'); box.id = '__positron_overlay';
+            box.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:2147483647;max-width:60%;font:12px/1.45 monospace;background:#b91c1c;color:#fff;padding:8px 10px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:pre-wrap;word-break:break-word';
+            (document.body || document.documentElement).appendChild(box);
+          }
+          var line = document.createElement('div');
+          line.textContent = msg + (detail ? '\\n' + detail : '');
+          box.appendChild(line);
+          while (box.children.length > 5) box.removeChild(box.firstChild);
+          clearTimeout(box.__t);
+          box.__t = setTimeout(function(){ box.remove(); }, 10000);
+        }
+        window.addEventListener('error', function(e) {
+          var msg = e.message || 'Error';
+          var where = e.filename ? ' (' + e.filename + ':' + e.lineno + ':' + e.colno + ')' : '';
+          show(msg + where, e.error && e.error.stack);
+          post({message: msg, file: e.filename || '', line: e.lineno || 0,
+                column: e.colno || 0, stack: (e.error && e.error.stack) || ''});
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+          var r = e.reason;
+          var msg = 'Unhandled rejection: ' + ((r && (r.message || r.stack)) || r);
+          show(msg);
+          post({message: msg, file: '', line: 0, column: 0,
+                stack: (r && r.stack) || String(r)});
+        });
+      })();
+      JS
+
     # Serves a frontend directory from disk over HTTP for development.
     #
     # This is the runtime counterpart of `Application#embed_directory`:
@@ -174,6 +219,15 @@ module Positron
               html = snippet + html
             end
           end
+        end
+
+        # Dev error overlay (see Dev::OVERLAY_JS) — every page, marker
+        # or not.
+        overlay = "<script>#{Dev::OVERLAY_JS}</script>"
+        if closing = html.match(/<\/head>/i)
+          html = html.insert(closing.begin.not_nil!, overlay)
+        else
+          html = overlay + html
         end
 
         html

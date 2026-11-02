@@ -8,6 +8,37 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Frameless windows + CSS-drag (Wails `--wails-draggable` analogue):
+  `WebViewConfig.frameless = true` creates an undecorated window and
+  enables drag handles — elements (or their ancestors) with the
+  `--positron-drag: drag` custom CSS property start a native window
+  move on button press; double-click on a handle toggles maximize
+  (`no-drag` stops the walk). The DOM hit-test runs synchronously
+  through the JSC C API inside the GTK button-press handler, so the
+  drag begins while the button is held. Linux/WebKitGTK only.
+- Notification actions: `notifications.send(title, body, id?, actions?)`
+  accepts `[{id, title}]` button pairs (libnotify on Linux); clicks
+  arrive as `notification.action` {id, action} events (JS via
+  `Positron.on`, Crystal via EventBus), the body click stays
+  `notification.clicked` and now also reaches the JS side on Linux.
+- Dev error overlay: every HTML page served by the dev asset server
+  gets a script that catches `window.onerror` / `unhandledrejection`,
+  renders a floating overlay and posts a `dev.error` bridge event; the
+  host duplicates it to STDERR (`[positron] frontend error: …`).
+  Release builds never see the script.
+- `window.reload()` / `window.exec_js(script)` window-plugin commands
+  (Wails `WindowReload` / `WindowExecJS` analogues) — implemented via
+  `eval_js`, so they work on every platform without adapter support.
+- Async command dispatch: `Host#dispatch` now runs every command
+  handler in a Crystal fiber (the Wails/Tauri model), so slow commands
+  never freeze the GUI thread; the promise resolve is marshalled back
+  via `run_on_main`. The envelope is parsed once and the response
+  serialized once — `CommandResult.raw_json` is used verbatim by
+  `to_js_resolve` as the single-serialization fast path, and
+  `CommandRegistry.parse` gained a `JSON::Any` overload to skip the
+  string round-trip. `Host#dispatch_now` is the synchronous variant
+  (tests/embedders); the EventBus `command.invoked` resolve is now
+  correctly marshalled to the GUI thread.
 - Close-veto hook (Wails `OnBeforeClose` analogue):
   `Application#on_before_close : Bool` is called on the GUI thread when
   the user requests window close; returning false keeps the window
