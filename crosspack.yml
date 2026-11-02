@@ -114,7 +114,7 @@ build:
         - crystal spec          # specs must pass — same gate as CI
         - rake build:cli        # bin/positron
         - rake build:examples   # examples/<name>/<name>, logs to logs/
-        - cp examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
+        - cp examples/async_progress/async_progress examples/eta_progress/eta_progress examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
       artifacts:
         from: bin
         include: ["*"]
@@ -153,7 +153,7 @@ build:
         - rake build:cli        # bin/positron
         - rake build:examples   # examples/<name>/<name>, logs to logs/
         - rm -f examples/*/*.dwarf bin/*.dwarf
-        - cp examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
+        - cp examples/async_progress/async_progress examples/eta_progress/eta_progress examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
       artifacts:
         from: bin
         include: ["*"]

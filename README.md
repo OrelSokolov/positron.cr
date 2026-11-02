@@ -463,6 +463,14 @@ examples/
     scheduler_demo.cr                    # scheduler: freeze / yield /
     burn.cr                              # subprocess strategies
     frontend/
+  async_progress/                        # background job pushing
+    async_progress.cr                    # progress events to the UI
+    worker.cr                            # (async_work + emit_to_js)
+    frontend/
+  eta_progress/                          # 10 workers, tqdm-style
+    eta_progress.cr                      # bars with %, elapsed, rate,
+    worker.cr                            # ETA (async_work per worker)
+    frontend/
 assets/
   crystal-icon.svg                       # Blue crystal icon
 ```

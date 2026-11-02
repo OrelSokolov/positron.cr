@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Positron — async progress demo</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <h1>Асинхронный воркер с прогрессом</h1>
+
+  <div class="row">
+    <button id="start">Запустить воркер (10 с)</button>
+    <button id="ping" class="secondary">Пинг</button>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div id="bar"></div></div>
+    <div id="progress-label">воркер не запущен</div>
+  </div>
+
+  <div id="timeline" class="timeline"></div>
+
+  <div id="result" class="result"></div>
+
+  <p class="hint">
+    Кнопка «Запустить» моментально получает ответ с id задачи — воркер
+    работает в фоновом волокне (<code>Positron.async_work</code>) и каждую
+    секунду шлёт событие <code>demo.progress</code>: сколько секунд прошло
+    и квадрат этого числа (t и t²). Итог приходит событием
+    <code>demo.done</code>. Пока воркер спит, кнопка «Пинг» отвечает
+    мгновенно — хост не заблокирован.
+  </p>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>
