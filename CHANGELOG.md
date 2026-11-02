@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-03
+
 ### Added
 
 - `Positron.async_work` DSL — the single rule for background work, used
