@@ -1,0 +1,43 @@
+body {
+  font: 14px/1.5 system-ui, sans-serif;
+  color: #1f2430;
+  max-width: 680px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+h1 { font-size: 20px; }
+
+#status {
+  background: #f1f3f7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-family: monospace;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+button {
+  font: inherit;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #b9c0cf;
+  background: #fff;
+  cursor: pointer;
+  min-width: 170px;
+}
+
+button:disabled { background: #e8eaf0; cursor: progress; }
+#freeze:not(:disabled) { border-color: #d28b8b; }
+#busy:not(:disabled) { border-color: #c9b26b; }
+#isolated:not(:disabled) { border-color: #8bc0a0; }
+
+.out { font-family: monospace; font-size: 12px; color: #444; }
+
+.hint { color: #5a6070; font-size: 12px; margin-top: 20px; }

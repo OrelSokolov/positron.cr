@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Positron — scheduler demo</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <h1>Crystal-планировщик: блокирующий цикл против UI</h1>
+
+  <div id="status">
+    <div>Локальное время (JS): <span id="clock">—</span></div>
+    <div>Хост-тик: <span id="tick">ещё не было</span></div>
+  </div>
+
+  <div class="row">
+    <button id="freeze">Заморозить (10 с)</button>
+    <span id="freeze-out" class="out"></span>
+  </div>
+  <div class="row">
+    <button id="busy">Занять с yield (10 с)</button>
+    <span id="busy-out" class="out"></span>
+  </div>
+  <div class="row">
+    <button id="isolated">В subprocess (10 с)</button>
+    <span id="isolated-out" class="out"></span>
+  </div>
+
+  <p class="hint">
+    «Хост-тик» обновляется событием <code>demo.tick</code> из Crystal
+    каждые 250 мс. Нажмите «Заморозить» — тики и все кнопки встанут,
+    хотя локальные часы продолжат идти (JS живёт в процессе WebKit).
+    «Занять с yield» держит UI живым, отдавая управление каждые 50 мс.
+    «В subprocess» — настоящий параллелизм: цикл считает отдельный
+    процесс, хост вообще не занят.
+  </p>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>
