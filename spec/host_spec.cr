@@ -3,6 +3,7 @@ require "../src/positron/command_registry"
 require "../src/positron/state_manager"
 require "../src/positron/plugin"
 require "../src/positron/js_facade_generator"
+require "../src/positron/dev/asset_server"
 require "../src/positron/ports/webview_port"
 require "../src/positron/ports/tray_port"
 require "../src/positron/application"
@@ -121,13 +122,30 @@ describe Positron::Host do
   it "dispatches command envelopes and resolves the JS promise" do
     host, app = build_host
 
-    response = host.dispatch(%({"type":"command","id":"abc","name":"greet","args":{"name":"Crystal"}}))
+    response = host.dispatch_now(%({"type":"command","id":"abc","name":"greet","args":{"name":"Crystal"}}))
 
     app.greeted.should eq(["Crystal"])
     response.should contain(%("abc"))
     response.should contain("true")
     response.should contain(%("Hello, Crystal!"))
     host.webview.as(NullWebView).evals.should be_empty
+  end
+
+  it "dispatches asynchronously: runs the handler in a fiber and resolves on the main thread" do
+    host, app = build_host
+
+    response = host.dispatch(%({"type":"command","id":"abc","name":"greet","args":{"name":"Async"}}))
+
+    response.should eq("") # bridge callbacks skip evaluating empty responses
+    host.main_calls.should eq(0) # nothing ran yet — the fiber is queued
+    app.greeted.should be_empty
+    sleep 50.milliseconds # let the spawned fiber run
+
+    app.greeted.should eq(["Async"])
+    evals = host.webview.as(NullWebView).evals
+    evals.size.should eq(1)
+    evals[0].should contain("__positronResolve(\"abc\", true")
+    evals[0].should contain("Hello, Async!")
   end
 
   it "routes event envelopes into the EventBus and returns an empty string" do
@@ -138,7 +156,7 @@ describe Positron::Host do
       received << payload["url"].to_s
     end
 
-    response = host.dispatch(%({"type":"event","event":"spec.hostevent","payload":{"url":"app://open"}}))
+    response = host.dispatch_now(%({"type":"event","event":"spec.hostevent","payload":{"url":"app://open"}}))
 
     response.should eq("")
     sleep 50.milliseconds
@@ -148,7 +166,7 @@ describe Positron::Host do
   it "treats a payload without a type as a command request" do
     host, app = build_host
 
-    response = host.dispatch(%({"id":"xyz","name":"greet","args":{"name":"Fallback"}}))
+    response = host.dispatch_now(%({"id":"xyz","name":"greet","args":{"name":"Fallback"}}))
 
     app.greeted.should eq(["Fallback"])
     response.should contain("Fallback")
@@ -157,10 +175,25 @@ describe Positron::Host do
   it "reports unknown commands as failures" do
     host, _app = build_host
 
-    response = host.dispatch(%({"type":"command","id":"err","name":"missing","args":{}}))
+    response = host.dispatch_now(%({"type":"command","id":"err","name":"missing","args":{}}))
 
     response.should contain("false")
     response.should contain("Unknown command: missing")
+  end
+
+  it "uses CommandResult#raw_json verbatim when set (single serialization)" do
+    host, _app = build_host
+    host.registry.register("raw") do |request|
+      Positron::CommandResult.new(
+        success: true,
+        data: JSON.parse("{}"),
+        raw_json: %({"already":"serialized"})
+      )
+    end
+
+    response = host.dispatch_now(%({"type":"command","id":"rj","name":"raw","args":{}}))
+
+    response.should contain(%({"already":"serialized"}))
   end
 
   it "emits events to the frontend via emit_to_js" do

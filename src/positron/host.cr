@@ -43,24 +43,37 @@ module Positron
 
     # Dispatch a JSON payload coming from the WebView.
     #
+    # Async by default (the Wails/Tauri model): the command handler runs
+    # in a Crystal fiber, so a slow command never freezes the GUI
+    # thread, and the promise resolve is marshalled back to the GUI
+    # thread via `run_on_main`. The envelope is parsed once and the
+    # response serialized once. Returns "" — adapters skip evaluating
+    # empty bridge responses.
+    #
     # Supports the generic bridge envelope:
     #   - command: { "type": "command", "id", "name", "args" }
     #   - event:   { "type": "event", "event", "payload" }
     def dispatch(json : String) : String
-      parsed = JSON.parse(json)
+      spawn { run_on_main { eval_js(dispatch_now(json)) } }
+      ""
+    end
 
+    # Synchronous dispatch: parse + run the handler + build the resolve
+    # JS. Used by `dispatch` internally and directly by tests/embedders
+    # that need the response string (e.g. without a GUI loop).
+    def dispatch_now(json : String) : String
+      dispatch_envelope(JSON.parse(json))
+    end
+
+    private def dispatch_envelope(parsed : JSON::Any) : String
       case parsed["type"]?.try(&.as_s?)
       when "event"
         event_name = parsed["event"].as_s
         EventBus.emit(event_name, parsed["payload"]? || JSON.parse("{}"))
         ""
-      when "command"
-        request = CommandRegistry.parse(parsed.to_json)
-        result = @registry.dispatch(request)
-        CommandRegistry.to_js_resolve(request, result)
       else
-        # Fallback: treat the whole payload as a command request.
-        request = CommandRegistry.parse(json)
+        # Commands (and the fallback: a bare command request).
+        request = CommandRegistry.parse(parsed)
         result = @registry.dispatch(request)
         CommandRegistry.to_js_resolve(request, result)
       end
@@ -101,8 +114,9 @@ module Positron
       end
 
       EventBus.on("command.invoked") do |payload|
-        result = dispatch(payload.to_json)
-        eval_js(result)
+        # EventBus handlers run in their own fibers; route the resolve
+        # through the GUI thread.
+        run_on_main { eval_js(dispatch_now(payload.to_json)) }
       end
 
       EventBus.on("state.changed") do |payload|
@@ -120,6 +134,18 @@ module Positron
         EventBus.on(event) do |payload|
           emit_to_js(event, payload)
         end
+      end
+
+      # Dev error overlay (Dev::OVERLAY_JS posts "dev.error" through the
+      # bridge): duplicate frontend errors to STDERR so the backend
+      # console/log carries them too.
+      EventBus.on("dev.error") do |payload|
+        message = payload["message"]?.try(&.to_s) || "unknown error"
+        file = payload["file"]?.try(&.to_s)
+        line = payload["line"]?.try(&.as_i?) || 0
+        column = payload["column"]?.try(&.as_i?) || 0
+        location = (file && !file.empty?) ? " (#{file}:#{line}:#{column})" : ""
+        STDERR.puts "[positron] frontend error: #{message}#{location}"
       end
     end
 

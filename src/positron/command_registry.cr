@@ -8,11 +8,15 @@ module Positron
     name : String,
     args : JSON::Any
 
-  # Result of a command invocation.
+  # Result of a command invocation. `raw_json`, when set, is used
+  # verbatim as the resolve payload (`to_js_resolve`) — the
+  # single-serialization fast path for handlers that already produced
+  # JSON, skipping `data.to_json`.
   record CommandResult,
     success : Bool,
     data : JSON::Any,
-    error : String? = nil
+    error : String? = nil,
+    raw_json : String? = nil
 
   # Metadata describing a command argument for JS facade generation.
   record ArgumentManifest,
@@ -50,11 +54,16 @@ module Positron
 
     # Helper to parse a raw JSON payload into a CommandRequest.
     def self.parse(json : String) : CommandRequest
-      parsed = JSON.parse(json)
+      parse(JSON.parse(json))
+    end
+
+    # Same, without the string round-trip when the envelope is already
+    # parsed (the async Host dispatch path).
+    def self.parse(payload : JSON::Any) : CommandRequest
       CommandRequest.new(
-        id: parsed["id"].as_s? || "",
-        name: parsed["name"].as_s? || "",
-        args: parsed["args"]? || JSON.parse("{}")
+        id: payload["id"]?.try(&.as_s?) || "",
+        name: payload["name"]?.try(&.as_s?) || "",
+        args: payload["args"]? || JSON.parse("{}")
       )
     end
 
@@ -63,7 +72,7 @@ module Positron
     def self.to_js_resolve(request : CommandRequest, result : CommandResult) : String
       id = request.id.to_json
       success = result.success.to_json
-      data = result.data.to_json
+      data = result.raw_json || result.data.to_json
       error = result.error.nil? ? "null" : result.error.to_json
 
       "window.__positronResolve(#{id}, #{success}, #{data}, #{error})"

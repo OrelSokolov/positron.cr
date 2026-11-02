@@ -75,7 +75,10 @@ module Positron
           registry.register({{method.name.stringify}}) do |request|
             Positron::CommandResult.new(
               success: true,
-              data: JSON.parse(self.{{method.name}}.to_json)
+              data: JSON.parse("{}"),
+              # The current macro does not forward request args (known
+              # limitation); methods registered this way are argless.
+              raw_json: self.{{method.name}}.to_json
             )
           end
           @command_manifest_list[{{method.name.stringify}}] = Positron::CommandManifest.new(
