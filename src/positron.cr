@@ -3,6 +3,7 @@ require "log"
 
 require "./positron/event_bus"
 require "./positron/async_work"
+require "./positron/http_router"
 {% if compare_versions(Crystal::VERSION, "1.21.0") >= 0 %}
   require "./positron/async_work_parallel"
 {% else %}

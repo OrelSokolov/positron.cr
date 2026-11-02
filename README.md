@@ -48,6 +48,10 @@ What is already there ✔ and what is still needed ☐:
 - [x] Async command dispatch: handlers run in fibers off the GUI
       thread, promise resolve marshalled back via `run_on_main`
       (`Host#dispatch`; `dispatch_now` for synchronous use)
+- [x] Virtual HTTP layer: `Positron.http.*` (fetch semantics) over the
+      bridge, `Router` with block routes, `namespace`, Rails-style
+      controllers (`@[Positron::Heavy]`, `resources`), middleware,
+      light/heavy work semantics shared with async_work
 - [x] WebView adapter (WebKitGTK 4.1): window API, devtools, drag & drop,
       custom URI schemes
 - [x] System tray (Ayatana AppIndicator) with cross-platform tray API
@@ -153,6 +157,7 @@ there — WKWebView consumes file drops with no public hook). Legend: ✅ works 
 |---|---|---|
 | EventBus | `src/positron/event_bus.cr` | Internal pub/sub with per-handler fibers |
 | Command Registry | `src/positron/command_registry.cr` | JSON command dispatch + `@[Command]` macro support |
+| Virtual HTTP Router | `src/positron/http_router.cr` | Fetch-semantics resource routing, controllers, middleware, light/heavy |
 | Plugin System | `src/positron/plugin.cr` | Base plugin + `PluginManager` |
 | Tray Item | `src/positron/tray_item.cr` | Cross-platform menu item abstraction |
 | Icon Source | `src/positron/icon_source.cr` | Cross-platform icon descriptor (SVG/PNG/ICO) |
@@ -316,6 +321,85 @@ end                                                 # body runs on a
 The DSL is also available as instance methods on the application
 (`async_work`, `parallel_work`, `on_main`) so app code reads naturally.
 
+## Virtual HTTP: resource routing without a server
+
+The frontend can talk to the backend the way browser apps talk to
+servers — method + path + body — over the same bridge. No network is
+involved: `Positron.http.get("/api/...")` becomes a `type: "http"`
+envelope, matched against routes drawn in `Application#draw_routes`,
+and the promise always resolves with `{status, body}` (fetch
+semantics: 404/500 are statuses, not rejections; only a dead bridge
+rejects).
+
+JS side (generated facade):
+
+```js
+const res = await Positron.http.get(`/api/projects/${id}/tasks?page=2&q=привет`)
+if (res.status === 200) render(res.body.tasks)
+
+await Positron.http.put(`/api/tasks/${taskId}`, { stressedText: "при́мер" })
+// Opt-in fetch interception for path-relative URLs (real fetch stays
+// available for the dev server / HMR):
+Positron.installFetch()
+```
+
+Crystal side — block routes:
+
+```crystal
+def draw_routes(r : Positron::Router)
+  r.namespace "/api" do
+    r.get "/projects" { |req| list_projects(req.query) }
+    r.heavy do                       # CPU/blocking work: worker pool
+      r.get "/projects/:id/tasks" { |req| task_page(req.params["id"], req.query) }
+    end
+    r.put "/tasks/:id" { |req| update_task(req.params["id"], req.body) }
+  end
+end
+```
+
+Or Rails-style controllers — `@[Positron::Heavy]` on an action marks it
+for the worker pool automatically; `resources` maps the five RESTful
+actions in one line:
+
+```crystal
+class TasksController < Positron::Controller
+  @[Positron::Heavy]
+  def index(request)                 # GET /api/tasks
+    Db.task_page(request.query)
+  end
+
+  def update(request)                # PUT /api/tasks/:id
+    Db.update_task(request.params["id"], request.body)
+  end
+
+  actions                            # macro: generates the dispatch table
+end
+
+def draw_routes(r)
+  r.resources "/api/tasks", TasksController
+end
+```
+
+Middleware (cross-cutting concerns — logging, timings, error capture):
+
+```crystal
+Positron::Router.use do |req|
+  t = Time.instant
+  nil # pass through; return a Response to short-circuit
+end
+```
+
+Work semantics are shared with the async_work rule: `light` routes run
+in the dispatch fiber (sub-second handlers), `heavy` routes
+(`r.heavy`, `heavy: true`, or `@[Positron::Heavy]`) run on the Parallel
+worker pool and can never freeze the GUI. Actions may return any
+JSON-able value (→ 200) or a `Positron::Response` for custom statuses;
+handler exceptions become `{status: 500, body: {error}}`, unknown
+paths become 404.
+
+Binary payloads (audio samples, images) should keep using commands —
+the bridge envelope is JSON.
+
 ## Project structure
 
 ```
@@ -324,6 +408,7 @@ src/
   positron/
     event_bus.cr                         # Internal pub/sub
     command_registry.cr                  # Command dispatch
+    http_router.cr                       # Virtual HTTP: Router/Controller/middleware
     plugin.cr                            # Plugin base + manager
     tray_item.cr                         # Cross-platform tray menu item
     icon_source.cr                       # Cross-platform icon descriptor

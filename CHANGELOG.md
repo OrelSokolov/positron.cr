@@ -26,6 +26,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
   (handler body on a worker thread; UI access forbidden inside, a
   crashing handler becomes an error result). Plus instance-level
   `async_work`/`parallel_work`/`on_main` on `Positron::Application`.
+- Virtual HTTP layer — resource routing without a server:
+  - `Positron.http.{get,post,put,patch,delete}` on the JS side (fetch
+    semantics: the promise always resolves with `{status, body}`) and
+    opt-in `Positron.installFetch()` interception of relative paths;
+  - `Positron::Router` on the Crystal side: block routes, `namespace`
+    nesting, `:param` extraction with percent-decoding, query-string
+    parsing, `heavy` groups;
+  - `Positron::Controller` with the `actions` macro and Rails-style
+    `resources` (index/show/create/update/destroy);
+    `@[Positron::Heavy]` on an action auto-routes it to the Parallel
+    worker pool at registration;
+  - `Positron::Router.use` middleware chain (return a `Response` to
+    short-circuit, `nil` to pass through);
+  - handler exceptions become `{status: 500, body: {error}}`, unknown
+    routes 404 — never a rejected promise.
 
 ### Fixed
 

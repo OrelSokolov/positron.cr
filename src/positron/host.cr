@@ -25,6 +25,7 @@ module Positron
       @app.host = self
       bind_plugins
       @app.register_commands(@registry)
+      @app.draw_routes(@app.router)
       wire_event_bus
       # Publish only once fully initialized: letting a partially built
       # host escape would expose nil ivars to async_work consumers.
@@ -91,6 +92,15 @@ module Positron
 
     private def dispatch_envelope(parsed : JSON::Any) : String
       case parsed["type"]?.try(&.as_s?)
+      when "http"
+        # Virtual HTTP: fetch-style request routed through the app's
+        # Router. Errors are statuses (404/500), not rejections — the
+        # JS promise always resolves with {status, body}.
+        request = Request.parse_envelope(parsed)
+        response = @app.router.handle(request)
+        id = (parsed["id"]?.try(&.as_s?) || "").to_json
+        payload = {"status" => response.status, "body" => response.body}.to_json
+        "window.__positronResolve(#{id}, true, #{payload}, null)"
       when "event"
         event_name = parsed["event"].as_s
         EventBus.emit(event_name, parsed["payload"]? || JSON.parse("{}"))

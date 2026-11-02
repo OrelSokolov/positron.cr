@@ -11,9 +11,15 @@ module Positron
     @icon_temp_path : String?
     getter plugins = PluginManager.new
     getter registry = CommandRegistry.new
+    getter router = Router.new
 
     # Called once the native window and event loop are ready.
     abstract def on_ready
+
+    # Override to wire virtual HTTP routes (Router#resources / block
+    # routes / middleware). Called once before the window is ready.
+    def draw_routes(router : Router)
+    end
 
     # Lifecycle events forwarded from the native shim.
     def on_lifecycle(state : String)

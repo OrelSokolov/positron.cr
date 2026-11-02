@@ -164,6 +164,12 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   the resolve is marshalled to the GUI thread; `Host#dispatch_now` is
   the synchronous variant for tests. Prefer `CommandResult.raw_json`
   to serialize a handler result exactly once.
+- Virtual HTTP envelope: `{"type":"http","id","method","path","body"}` —
+  same `__positronResolve` handshake, routed through the app's
+  `Router` (`Application#draw_routes`). 4xx/5xx are statuses inside a
+  resolved `{status, body}` (fetch semantics), never rejections. New
+  resource-style APIs go through the router; commands stay for
+  imperative plugin calls and binary payloads.
 - **Never hand-roll `eval_js` strings to push events to the frontend** —
   use `Host#emit_to_js(event, payload)`.
 - Examples use `embed_application_files(__DIR__, icon_path)` to bake
