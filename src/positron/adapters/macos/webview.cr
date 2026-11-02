@@ -425,10 +425,12 @@ module Positron
           @@should_close_imp = ->(objc_self : Void*, _cmd : Void*, sender : Void*) do
             adapter = ObjC.target_for(objc_self).as?(WKWebView)
             return false if adapter.nil?
-            if adapter.try(&.close_to_tray?)
-              ObjC.send1(sender, ObjC.sel("orderOut:"), Pointer(Void).null)
-            else
-              App.request_stop
+            if adapter.allow_close?
+              if adapter.try(&.close_to_tray?)
+                ObjC.send1(sender, ObjC.sel("orderOut:"), Pointer(Void).null)
+              else
+                App.request_stop
+              end
             end
             # Never let AppKit destroy the window — the event loop owns it.
             false

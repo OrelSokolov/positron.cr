@@ -32,6 +32,22 @@ module Positron
     #   3. If the handler returns a non-empty string, evaluate it as JS.
     abstract def bind(name : String, &handler : String -> String)
 
+    # Close-veto hook (Wails `OnBeforeClose` analogue). Called on the GUI
+    # thread when the *user* requests window close (close button / WM
+    # close / windowShouldClose). Return false from the callback to keep
+    # the window open. Programmatic `Host#stop` never consults it.
+    #
+    # Wired automatically by `DesktopHost` to `Application#on_before_close`.
+    property before_close : (-> Bool)?
+
+    # Whether the user-initiated close may proceed: true when no
+    # before_close callback is set (default allow), otherwise whatever
+    # the callback returns.
+    def allow_close? : Bool
+      callback = before_close
+      callback ? callback.call : true
+    end
+
     # Serve a custom URI scheme (e.g. `app://`) from the host process, so
     # embedded assets can be loaded without any HTTP server. The handler
     # receives the request path ("/index.html") and returns a SchemeResponse,

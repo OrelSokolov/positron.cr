@@ -13,6 +13,10 @@ module Positron
       @tray = TrayAdapter.new
       @event_loop = PlatformEventLoop.new(@webview)
 
+      # User-initiated window close goes through the application's
+      # on_before_close hook (close veto). Host#stop stays unconditional.
+      @webview.before_close = ->{ app.on_before_close }
+
       super(app)
 
       @tray.create

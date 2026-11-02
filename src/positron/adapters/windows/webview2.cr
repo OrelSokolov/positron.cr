@@ -53,10 +53,12 @@ module Positron
 
           case msg
           when Win32::WM_CLOSE
-            if adapter.close_to_tray?
-              adapter.hide
-            else
-              adapter.terminate_event_loop
+            if adapter.allow_close?
+              if adapter.close_to_tray?
+                adapter.hide
+              else
+                adapter.terminate_event_loop
+              end
             end
             0_i64
           when Win32::WM_SIZE, Win32::WM_MOVE

@@ -58,10 +58,12 @@ module Positron
           @close_to_tray = config.close_to_tray
           @delete_handler = ->(widget : Void*, event : Void*, data : Void*) do
             webkit = Box(WebKitGTK).unbox(data)
-            if webkit.close_to_tray?
-              webkit.hide
-            else
-              webkit.quit_event_loop
+            if webkit.allow_close?
+              if webkit.close_to_tray?
+                webkit.hide
+              else
+                webkit.quit_event_loop
+              end
             end
             1 # TRUE: stop the default destroy behavior
           end

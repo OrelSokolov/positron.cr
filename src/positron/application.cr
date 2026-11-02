@@ -36,6 +36,14 @@ module Positron
     def on_destroy
     end
 
+    # Called on the GUI thread when the user requests window close
+    # (close button / window-manager close). Return false to veto the
+    # close — e.g. to confirm quitting while a recording is active.
+    # Mirrors Wails `OnBeforeClose`; programmatic `Host#stop` bypasses it.
+    def on_before_close : Bool
+      true
+    end
+
     # Deep link handling.
     def on_deep_link(url : String)
     end

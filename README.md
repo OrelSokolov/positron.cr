@@ -57,6 +57,10 @@ What is already there ✔ and what is still needed ☐:
       no recompiling for frontend changes
 - [x] Window management API (title/size/fullscreen/frameless/
       always-on-top/min-max, window events in JS)
+- [x] Close-veto hook (`Application#on_before_close`, Wails
+      `OnBeforeClose` analogue): return false to keep the window open;
+      user-initiated close only — `Host#stop` bypasses it (Linux/macOS/
+      Windows adapters)
 - [x] `positron` CLI: `init` / `dev` / `build` / `doctor` / `package`
 - [x] Packaging: `.desktop` entries, hicolor icons, AppDir/AppImage, deb
 - [x] Headless test suite (53 specs)

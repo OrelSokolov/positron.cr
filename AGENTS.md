@@ -173,6 +173,10 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   no local HTTP server needed. Call it before `create`.
 - `WebViewConfig#close_to_tray` (default true): false makes the window close
   button quit the event loop instead of hiding to the tray.
+- `Application#on_before_close` (default true): called on the GUI thread
+  when the *user* closes the window; return false to veto. Wired by
+  `DesktopHost` into `WebViewPort#before_close` (`#allow_close?`);
+  `Host#stop` never consults it.
 - Dev mode: `Application#serve_directory(dir)` serves the frontend from
   disk with live reload; `POSITRON_DEV=1` switches one binary between
   served and embedded assets (this is what `positron dev` sets).

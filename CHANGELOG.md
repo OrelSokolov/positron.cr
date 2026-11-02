@@ -8,6 +8,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Close-veto hook (Wails `OnBeforeClose` analogue):
+  `Application#on_before_close : Bool` is called on the GUI thread when
+  the user requests window close; returning false keeps the window
+  open. Wired by `DesktopHost` into the new `WebViewPort#before_close`
+  callback (`#allow_close?`), consulted in all three platform close
+  paths — WebKitGTK `delete-event`, WebView2 `WM_CLOSE`, macOS
+  `windowShouldClose:`. Programmatic `Host#stop` never consults it.
+  Headless coverage in `spec/close_veto_spec.cr`.
 - All remaining macOS plugin adapter ports (M5.3), driven through the
   pure-Crystal ObjC runtime layer (`adapters/macos/objc.cr`):
   clipboard (`NSPasteboard` — text, PNG/TIFF image data, file URLs via
