@@ -93,4 +93,39 @@ describe Positron::CommandRegistry do
     js.should contain("false")
     js.should contain(%("Something went wrong"))
   end
+
+  describe "execution contexts" do
+    it "runs a :parallel handler's body off the dispatch fiber" do
+      dispatcher = Fiber.current
+      registry = Positron::CommandRegistry.new
+      registry.register("cpu.burn", execution: :parallel) do |request|
+        Positron::CommandResult.new(
+          success: true,
+          data: JSON.parse(%({"same_fiber": #{Fiber.current == dispatcher}}))
+        )
+      end
+
+      result = registry.dispatch(Positron::CommandRequest.new(
+        id: "p1", name: "cpu.burn", args: JSON.parse("{}")))
+      result.success.should be_true
+      result.data["same_fiber"].as_bool.should be_false
+    end
+
+    it "turns a crashing :parallel handler into an error result" do
+      registry = Positron::CommandRegistry.new
+      registry.register("cpu.boom", execution: :parallel) { |r| raise "burn exploded" }
+
+      result = registry.dispatch(Positron::CommandRequest.new(
+        id: "p2", name: "cpu.boom", args: JSON.parse("{}")))
+      result.success.should be_false
+      result.error.to_s.should contain("burn exploded")
+    end
+
+    it "rejects unknown execution symbols" do
+      registry = Positron::CommandRegistry.new
+      expect_raises ArgumentError, /unknown execution context/ do
+        registry.register("bad", execution: :somewhere) { |r| Positron::CommandResult.new(success: true, data: JSON.parse("{}")) }
+      end
+    end
+  end
 end

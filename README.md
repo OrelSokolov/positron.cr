@@ -248,8 +248,73 @@ wires to `window.webkit.messageHandlers.crystal.postMessage` under the hood.
 │         Linux Native Shim               │
 │  WebKitGTK   AppIndicatorTray           │
 │  GTK Main Loop + Crystal fibers         │
+└───────────────┬─────────────────────────┘
+                │ Positron.async_work rule
+┌───────────────▼─────────────────────────┐
+│   Fiber::ExecutionContext::Parallel     │
+│   (worker threads for CPU-bound work)   │
 └─────────────────────────────────────────┘
 ```
+
+## Background work: the async_work rule
+
+All background work goes through one DSL — the framework itself uses it
+for command dispatch, so app code cannot pick the wrong pattern:
+
+```crystal
+Positron.async_work { ... }      # конкурентно (fiber): IO, сабпроцессы, ожидание
+Positron.parallel_work { ... }   # параллельно (рабочий поток): CPU-циклы
+task.value                       # ждать результат (паркует fiber)
+Positron.on_main { ... }         # тронуть UI из любой задачи
+```
+
+Expanded, with the contracts:
+
+```crystal
+# Concurrent (a fiber): for work that waits — IO, subprocesses,
+# sleeps, channels. Never tight-loop here.
+task = Positron.async_work { parse_large_file(path) }
+
+# Truly parallel (a worker thread, Crystal >= 1.21): for CPU-bound
+# loops that would starve the cooperative scheduler and freeze the
+# GUI. Never touch the UI inside the block; the return value crosses
+# as JSON (nothing mutable is shared).
+task = Positron.parallel_work { heavy_computation(input) }
+
+# Await — parks the calling fiber. Raises on the GUI fiber instead of
+# freezing the UI.
+result = task.value
+
+# Touch the UI from any task.
+Positron.on_main { label.text = result.to_s }
+```
+
+Errors surface as `_async_error` / `_parallel_error` keys in the
+result. `Host#dispatch` routes every command through `async_work`, and
+`command.invoked` through `dispatch` — there is no code path that runs
+a handler on the GUI fiber.
+
+For command handlers the choice is declarative — declare the character
+of the work at registration and the framework picks the context:
+
+```crystal
+registry.register("project.load") do |req|          # :fiber (default)
+  load_project(req.args["path"].as_s)                # IO-bound: waits
+end
+
+registry.register("project.reindex", execution: :parallel) do |req|
+  reindex_everything                                # CPU-bound: the
+end                                                 # body runs on a
+                                                    # worker thread and
+                                                    # cannot freeze the
+                                                    # GUI (no touching
+                                                    # the UI inside; a
+                                                    # crash becomes an
+                                                    # error result)
+```
+
+The DSL is also available as instance methods on the application
+(`async_work`, `parallel_work`, `on_main`) so app code reads naturally.
 
 ## Project structure
 
@@ -309,6 +374,10 @@ examples/
   hello/
     hello.cr                             # Polished demo app
     frontend/                            # HTML/CSS/JS assets
+  scheduler_demo/                        # CPU burn vs cooperative
+    scheduler_demo.cr                    # scheduler: freeze / yield /
+    burn.cr                              # subprocess strategies
+    frontend/
 assets/
   crystal-icon.svg                       # Blue crystal icon
 ```

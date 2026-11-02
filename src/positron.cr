@@ -2,6 +2,12 @@ require "json"
 require "log"
 
 require "./positron/event_bus"
+require "./positron/async_work"
+{% if compare_versions(Crystal::VERSION, "1.21.0") >= 0 %}
+  require "./positron/async_work_parallel"
+{% else %}
+  require "./positron/async_work_fallback"
+{% end %}
 require "./positron/command_registry"
 require "./positron/state_manager"
 require "./positron/plugin"

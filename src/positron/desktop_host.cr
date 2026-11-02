@@ -30,6 +30,10 @@ module Positron
       @event_loop.run_on_main(&block)
     end
 
+    def gui_context? : Bool
+      @event_loop.gui_thread?
+    end
+
     def run
       @app.on_ready
       @plugins.each(&.on_ready(self))

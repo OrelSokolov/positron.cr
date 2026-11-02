@@ -52,6 +52,29 @@ module Positron
     def on_permission_result(permission : String, granted : Bool)
     end
 
+    # --- Background work DSL (delegates to the Positron module rule) ---
+    #
+    # Available as instance methods so application code reads naturally:
+    #
+    #   async_work { load_file(path) }          # concurrent fiber
+    #   parallel_work { recompute_all(...) }    # worker thread (CPU)
+    #   on_main { refresh_ui }                  # GUI-safe UI update
+    #
+    # See Positron.async_work for the full contracts (task.value GUI
+    # guard, JSON-only results from parallel_work, error keys).
+
+    def async_work(*, name : String = "async_work", &block : -> _)
+      Positron.async_work(name: name, &block)
+    end
+
+    def parallel_work(*, name : String = "parallel_work", &block : -> _)
+      Positron.parallel_work(name: name, &block)
+    end
+
+    def on_main(&block : ->) : Nil
+      Positron.on_main(&block)
+    end
+
     # Override to register application commands into the registry.
     # Use the `command_registry` macro to auto-wire @[Command] methods:
     #

@@ -8,6 +8,54 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `Positron.async_work` DSL — the single rule for background work, used
+  by the framework itself (`Host#dispatch` routes through it):
+  - `Positron.async_work { ... }` — concurrent fiber (IO, subprocesses,
+    waiting);
+  - `Positron.parallel_work { ... }` — true parallelism on a
+    `Fiber::ExecutionContext::Parallel` worker thread (Crystal >= 1.21;
+    concurrent-fiber fallback on older toolchains); the result crosses
+    as JSON, block errors arrive as `_parallel_error`;
+  - `task.value` — await (parks the calling fiber, refuses to run on
+    the GUI fiber — the "window froze" bug class);
+  - `Positron.on_main { ... }` — touch the UI from any task.
+- `Host.current` / `Host#gui_context?` — the plumbing behind the DSL's
+  GUI-thread guard.
+- `CommandRegistry#register(name, execution:)` — declarative execution
+  context for command handlers: `:fiber` (default) or `:parallel`
+  (handler body on a worker thread; UI access forbidden inside, a
+  crashing handler becomes an error result). Plus instance-level
+  `async_work`/`parallel_work`/`on_main` on `Positron::Application`.
+
+### Fixed
+
+- `Host#dispatch` executed the whole command handler inside the GLib
+  idle callback — i.e. on the GUI thread — so even a yielding CPU burn
+  froze the UI (`Fiber.yield` from inside an idle callback never
+  returns control to GTK). Handlers now run in their dispatch fiber;
+  only the promise resolve is marshalled to the GUI thread.
+- `EventLoop::Linux#run_on_main` handed Boehm-GC box pointers to
+  `g_idle_add`; the GC never scans GLib's idle queue, so boxes (and
+  their captured command payloads) could be collected before the idle
+  fired — lost promise resolves, garbage command strings, segfaults.
+  GLib now receives only an integer id; the closure lives in a
+  GC-scanned Hash until after it runs.
+- The GTK adapter passed unrooted `Box.box(self)` pointers to
+  `g_signal_connect_data` (same GC hazard, for the adapter's whole
+  lifetime). All connects now share one memoized, ivar-rooted box.
+
+### Added
+
+- `examples/scheduler_demo`: demonstrates how CPU-bound work interacts
+  with Crystal's cooperative scheduler — a naive 10 s loop freezes the
+  whole host (the GTK loop included), periodic `Fiber.yield` keeps the
+  UI alive, and a child-process burn is true parallelism (the pattern
+  for blocking code you don't own). The frontend shows a host
+  heartbeat age as the freeze indicator (JS timers live in the WebKit
+  process and keep running while the host is blocked). Headless
+  coverage in `spec/scheduler_demo_spec.cr` — the freeze claim runs in
+  a clean subprocess because the spec framework itself adds fiber
+  yield points that mask starvation.
 - Frameless windows + CSS-drag (Wails `--wails-draggable` analogue):
   `WebViewConfig.frameless = true` creates an undecorated window and
   enables drag handles — elements (or their ancestors) with the

@@ -22,6 +22,12 @@ module Positron
         @configure_handler : Proc(Void*, Void*, Void*, Int32)?
         @press_handler : Proc(Void*, Void*, Void*, Int32)?
         @drag_handler : Proc(Void*, Void*, Int32, Int32, Void*, UInt32, UInt32, Void*, Nil)?
+        # Rooted Box(self) handed to GLib signal connections. A bare
+        # Box.box(self) result is unreferenced GC memory: once collected,
+        # every signal callback dereferences a dangling pointer (lost
+        # clicks, garbage state, segfaults). Memoized in an ivar so the
+        # GC sees it for the adapter's lifetime.
+        @self_box : Void*?
         @close_to_tray : Bool = true
         @frameless : Bool = false
         @last_size : {Int32, Int32} = {-1, -1}
@@ -76,7 +82,7 @@ module Positron
             @window,
             "delete-event",
             @delete_handler.not_nil!.pointer.as(Void*),
-            Box.box(self),
+            boxed_self,
             nil,
             0
           )
@@ -131,7 +137,7 @@ module Positron
             context,
             scheme,
             callback.pointer.as(Void*),
-            Box.box(self),
+            boxed_self,
             Pointer(Void).null
           )
         end
@@ -183,7 +189,7 @@ module Positron
             @web_view,
             "button-press-event",
             @press_handler.not_nil!.pointer.as(Void*),
-            Box.box(self),
+            boxed_self,
             nil,
             0
           )
@@ -261,7 +267,7 @@ module Positron
 
           inject_bridge_shim(name)
 
-          data_ptr = Box.box(self)
+          data_ptr = boxed_self
 
           @message_handler = ->(manager : Void*, js_result : Void*, data : Void*) do
             webkit = Box(WebKitGTK).unbox(data)
@@ -287,6 +293,11 @@ module Positron
 
         protected def callback : Proc(String, String)?
           @callback
+        end
+
+        # GC-rooted Box(self) for GLib signal connections (see @self_box).
+        private def boxed_self : Void*
+          @self_box ||= Box.box(self)
         end
 
         def run_event_loop
@@ -422,7 +433,7 @@ module Positron
             @window,
             "configure-event",
             @configure_handler.not_nil!.pointer.as(Void*),
-            Box.box(self),
+            boxed_self,
             nil,
             0
           )
@@ -497,7 +508,7 @@ module Positron
             @window,
             "drag-data-received",
             @drag_handler.not_nil!.pointer.as(Void*),
-            Box.box(self),
+            boxed_self,
             nil,
             0
           )

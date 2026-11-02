@@ -11,9 +11,19 @@ module Positron
   # Crystal fibers and the native GUI loop coexist.
   class EventLoop::Linux < EventLoopPort
     @running = false
+    @gui_fiber : Fiber?
     @webview : WebViewPort
+    # Pending run_on_main callbacks keyed by id. The GLib side only ever
+    # sees the id (a plain integer packed into the data pointer), so no
+    # GC-heap pointer ever crosses the FFI boundary.
+    @main_callbacks = {} of UInt64 => Proc(Nil)
+    @next_callback_id : UInt64 = 0
+    # Single GTK loop per process; the idle trampoline needs to reach the
+    # owning instance and C callbacks cannot capture.
+    @@current : self?
 
     def initialize(@webview : WebViewPort)
+      @@current = self
       # GTK must be initialized before any native tray or window code runs.
       argc = 0
       LibGTK.gtk_init(pointerof(argc), nil)
@@ -21,6 +31,10 @@ module Positron
 
     def run
       @running = true
+      # Remember the GUI fiber: the native loop and every callback it
+      # fires (idles, GTK signals) run here. gui_thread? compares
+      # against it so background helpers can refuse UI-blocking waits.
+      @gui_fiber = Fiber.current
 
       # Bridge Crystal fibers into GTK: an idle callback drains pending
       # Crystal scheduler work and then returns to GTK.
@@ -48,19 +62,42 @@ module Positron
       @running
     end
 
+    def gui_thread? : Bool
+      Fiber.current == @gui_fiber
+    end
+
     # Schedule a block on the GTK main thread.
+    #
+    # GC-safe by construction: the Boehm GC never scans GLib's idle
+    # queue, so handing it a Box pointer (as this method used to) let
+    # the GC collect the box — and everything its closure captured,
+    # command payloads included — before the idle fired: lost promise
+    # resolves, garbage command strings, segfaults. Instead the closure
+    # lives in @main_callbacks (a GC-scanned Hash) and GLib receives
+    # only its integer id encoded as the data pointer. The id is
+    # removed only after the block has run, keeping the Proc rooted for
+    # the duration of its own execution.
     def run_on_main(&block : ->) : Nil
-      # g_idle_add is thread-safe and runs the callback on the main loop.
-      Box.box(block).tap do |box|
-        LibGLib.g_idle_add(
-          ->(ptr : Void*) {
-            cb = Box(Proc(Nil)).unbox(ptr)
-            cb.call
-            0 # G_SOURCE_REMOVE
-          }.pointer.as(Void*),
-          box
-        )
-      end
+      id = @next_callback_id += 1
+      @main_callbacks[id] = block
+
+      LibGLib.g_idle_add(
+        ->(data : Void*) {
+          if owner = @@current
+            if callback = owner.main_callbacks[data.address]?
+              callback.call
+              owner.main_callbacks.delete(data.address)
+            end
+          end
+          0 # G_SOURCE_REMOVE
+        }.pointer.as(Void*),
+        Pointer(Void).new(id)
+      )
+    end
+
+    # Read access for the idle trampoline (C callbacks cannot capture).
+    protected def main_callbacks
+      @main_callbacks
     end
 
     # Minimal GLib bindings required by the Linux event loop and adapters.

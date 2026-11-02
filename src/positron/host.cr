@@ -13,6 +13,11 @@ module Positron
     getter state_manager : StateManager
     getter plugins : PluginManager
 
+    # The most recently constructed host. Positron.async_work/on_main
+    # route through it; without one (tests, scripts) on_main runs
+    # inline and GUI guards stay off.
+    class_property current : Host?
+
     def initialize(@app : Application)
       @registry = @app.registry
       @state_manager = StateManager.new
@@ -21,6 +26,15 @@ module Positron
       bind_plugins
       @app.register_commands(@registry)
       wire_event_bus
+      # Publish only once fully initialized: letting a partially built
+      # host escape would expose nil ivars to async_work consumers.
+      Host.current = self
+    end
+
+    # True when called from the GUI fiber. Base hosts have no fiber
+    # loop, so false; DesktopHost delegates to its event loop.
+    def gui_context? : Bool
+      false
     end
 
     # Access the WebView surface. May raise on platforms without a desktop WebView.
@@ -54,7 +68,17 @@ module Positron
     #   - command: { "type": "command", "id", "name", "args" }
     #   - event:   { "type": "event", "event", "payload" }
     def dispatch(json : String) : String
-      spawn { run_on_main { eval_js(dispatch_now(json)) } }
+      # The single rule: handlers run through Positron.async_work (a
+      # background fiber — never the GUI fiber), and only the resolve
+      # is marshalled back with on_main. Running the handler inside the
+      # GUI idle callback froze the UI even for yielding work, because
+      # Fiber.yield from inside an idle callback never returns control
+      # to GTK.
+      Positron.async_work(name: "dispatch") do
+        response = dispatch_now(json)
+        Positron.on_main { eval_js(response) }
+        nil
+      end
       ""
     end
 
@@ -114,9 +138,10 @@ module Positron
       end
 
       EventBus.on("command.invoked") do |payload|
-        # EventBus handlers run in their own fibers; route the resolve
-        # through the GUI thread.
-        run_on_main { eval_js(dispatch_now(payload.to_json)) }
+        # Route through #dispatch so the handler obeys the async_work
+        # rule (a background fiber) instead of running synchronously on
+        # the GUI fiber.
+        dispatch(payload.to_json)
       end
 
       EventBus.on("state.changed") do |payload|

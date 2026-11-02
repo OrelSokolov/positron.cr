@@ -35,8 +35,40 @@ module Positron
     @commands = Hash(String, Proc(CommandRequest, CommandResult)).new
 
     # Register a command by name.
-    def register(name : String, &block : CommandRequest -> CommandResult)
-      @commands[name] = block
+    #
+    # `execution` declares the character of the handler's work so the
+    # framework picks the right context — apps never manage fibers:
+    #
+    #   :fiber    (default) — the handler runs in its dispatch fiber.
+    #              Right for IO, subprocesses, anything that waits.
+    #   :parallel             — the handler body runs on a
+    #              Fiber::ExecutionContext::Parallel worker thread
+    #              (Crystal >= 1.21). Right for CPU-bound loops, which
+    #              would otherwise starve the cooperative scheduler and
+    #              freeze the GUI. Such a handler must not touch the UI
+    #              or GTK state — build a CommandResult and return it;
+    #              handler exceptions become error results.
+    def register(name : String, execution : Symbol = :fiber, &block : CommandRequest -> CommandResult)
+      case execution
+      when :parallel
+        @commands[name] = ->(request : CommandRequest) do
+          Positron.run_parallel do
+            begin
+              block.call(request)
+            rescue ex
+              CommandResult.new(
+                success: false,
+                data: JSON.parse("{}"),
+                error: "parallel handler crashed: #{ex.message}"
+              )
+            end
+          end
+        end
+      when :fiber
+        @commands[name] = block
+      else
+        raise ArgumentError.new("unknown execution context #{execution.inspect} for command #{name} (use :fiber or :parallel)")
+      end
     end
 
     # Dispatch a command request.
