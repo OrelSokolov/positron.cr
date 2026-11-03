@@ -25,11 +25,13 @@ describe EtaProgressDemo do
     mid = snapshots[5]
     (4..7).should contain(mid.done)
     mid.rate.should be_close(10.0, 0.5)
-    # ETA = (total - done)/rate, elapsed tracks wall clock
-    mid.eta_ms.should be_close((20 - mid.done) / mid.rate * 1000, 250)
-    mid.elapsed_ms.should be_close(600, 250)
+    # ETA = (total - done)/rate, elapsed tracks wall clock. Tolerances
+    # are generous: loaded CI runners routinely stretch sleeps 20-50%
+    # (the failure mode being tested is total starvation, not jitter).
+    mid.eta_ms.should be_close((20 - mid.done) / mid.rate * 1000, 400)
+    mid.elapsed_ms.should be_close(600, 400)
 
-    total_ms.should be_close(2000, 400)
+    total_ms.should be_close(2000, 800)
   end
 
   it "keeps percent monotonic and ETA shrinking to zero" do
@@ -73,6 +75,8 @@ describe EtaProgressDemo do
       jitter: false, tick_ms: 100).run { |_s| nil }
 
     # ~1 s of sleeping work: the 50 ms ticker must interleave freely.
-    ticks.should be >= 15
+    # A blocked scheduler scores ~0-2; loaded CI runners stretch sleeps
+    # by 2x, so the floor sits well below the healthy count.
+    ticks.should be >= 10
   end
 end

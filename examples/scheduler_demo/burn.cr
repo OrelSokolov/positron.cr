@@ -47,19 +47,31 @@ module SchedulerDemo
     iterations
   end
 
-  # Isolated burn: a child bash process spins for the requested time
-  # and prints its iteration count. Pure shell arithmetic and the
-  # built-in SECONDS counter — zero forks (a `date`-per-iteration
-  # variant fork-storms ~500 execs/s and starves the host on small
-  # machines, which reads as "host blocked" even though the scheduler
-  # is fine). Process.run parks the calling fiber off-loop, so the
-  # host stays responsive and the child truly runs in parallel.
-  # SECONDS has 1 s granularity, so the runtime is seconds..seconds+1.
+  # Isolated burn: a child shell process spins for the requested time
+  # and prints its iteration count. Pure shell arithmetic — zero forks
+  # per iteration (a `date`-per-iteration variant fork-storms ~500
+  # execs/s and starves the host on small machines, which reads as
+  # "host blocked" even though the scheduler is fine). Process.run
+  # parks the calling fiber off-loop, so the host stays responsive and
+  # the child truly runs in parallel.
+  #
+  # Unix: bash + the built-in SECONDS counter (1 s granularity, hence
+  # the +1). Windows: there is no bash on a stock box — the `bash.exe`
+  # stub just prints a WSL error — so the child is a PowerShell loop.
+  # Both print a bare iteration count for the spec to match.
   def self.isolated_burn(seconds : Int32) : String
-    script = %{end=$((SECONDS + #{seconds} + 1)); i=0; } +
-             %{while (( SECONDS < end )); do ((i+=1)); done; echo $i}
-    stdout_io = IO::Memory.new
-    Process.run("bash", {"-c", script}, output: stdout_io)
-    stdout_io.to_s.strip
+    {% if flag?(:win32) %}
+      script = "$e = [DateTime]::UtcNow.AddSeconds(#{seconds} + 1); " +
+               "$i = 0; while ([DateTime]::UtcNow -lt $e) { $i++ }; $i"
+      stdout_io = IO::Memory.new
+      Process.run("powershell", {"-NoProfile", "-Command", script}, output: stdout_io)
+      stdout_io.to_s.strip
+    {% else %}
+      script = %{end=$((SECONDS + #{seconds} + 1)); i=0; } +
+               %{while (( SECONDS < end )); do ((i+=1)); done; echo $i}
+      stdout_io = IO::Memory.new
+      Process.run("bash", {"-c", script}, output: stdout_io)
+      stdout_io.to_s.strip
+    {% end %}
   end
 end
