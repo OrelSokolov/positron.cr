@@ -36,7 +36,15 @@ launch with the injected dylib (bundle path —
     SIMCTL_CHILD_DYLD_INSERT_LIBRARIES="/Applications/SimulatorCamera.app/Contents/Resources/libSimCamInject.dylib" \
       xcrun simctl launch booted cr.positron.camera
 
-Known quirk: `+[AVCaptureDevice
-authorizationStatusForMediaType:]` segfaults when called from our
-binary (other class methods answer fine), so the optional permission
-pre-check is skipped — see the note in `ios.cr`.
+Known quirk: the TCC-authorization methods of `AVCaptureDevice`
+(`authorizationStatusForMediaType:` and the newer
+`authorizationStatusForAVMediaType:` spelling) segfault when executed
+from our pure-Crystal-ObjC binary — every calling convention
+(objc_msgSend, NSInvocation, method_invoke) dies inside the TCC IMP,
+with or without the injection dylib, while non-TCC class methods of
+the same class answer cleanly. Fully reproduced and classified in
+`ios/repro_auth_status.{cr,sh}` (automatic — no user interaction, one
+variant per run). The optional permission pre-check is therefore
+skipped in `plugins/camera/ios.cr`; iOS raises the TCC prompt at
+device-input creation anyway, so capture on a real device is not
+affected.

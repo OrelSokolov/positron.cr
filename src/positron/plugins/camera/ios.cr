@@ -71,12 +71,16 @@ module Positron::Plugins
 
     def start(device_id : String?, width : Int32, height : Int32) : String?
       stop
-      # NOTE: +[AVCaptureDevice authorizationStatusForMediaType:] segfaults
-      # when called from this binary (the class object answers
-      # `description` / `defaultDeviceWithMediaType:` fine; only this
-      # method faults). The pre-check is optional — iOS raises the TCC
-      # prompt by itself when the device input is created — so it is
-      # skipped.
+      # NOTE: +[AVCaptureDevice authorizationStatusForMediaType:] (and
+      # the newer authorizationStatusForAVMediaType: spelling) segfault
+      # when executed from a pure-Crystal-ObjC binary on this toolchain
+      # — every calling convention dies inside the TCC authorization
+      # IMP, while non-TCC class methods of the same class
+      # (defaultDeviceWithMediaType:, systemPreferredCamera, …) answer
+      # cleanly. Fully reproduced and classified in
+      # ios/repro_auth_status.{cr,sh}. The pre-check is optional — iOS
+      # raises the TCC prompt by itself when the device input is
+      # created — so it is skipped.
 
       dev = Pointer(Void).null
       if device_id && !device_id.empty?
