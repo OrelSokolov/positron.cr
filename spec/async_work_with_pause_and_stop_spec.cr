@@ -24,21 +24,30 @@ describe PauseStopDemo do
     token = Positron::AsyncWork::Token.new
     ticks = [] of Int32
     done = Channel(PauseStopDemo::Result).new(1)
+    t0 = Time.instant
 
     spawn do
       done.send(PauseStopDemo.run(10, token) { |units| ticks << units })
     end
 
-    # Let the first unit land (~1 s), then cancel: the second sleep
-    # must raise within a slice (~25 ms), not after 10 seconds.
-    sleep 1.4.seconds
+    # Wait for the first unit to land (one second of sliced sleep, but
+    # slow CI runners stretch it well past 1.4 s), then cancel: the
+    # second sleep must raise within a slice (~25 ms), not after the
+    # remaining 9 seconds.
+    deadline = Time.instant + 10.seconds
+    while ticks.empty? && Time.instant <= deadline
+      sleep 50.milliseconds
+    end
+    cancelled_at = Time.instant
     token.cancel!
 
     result = done.receive
     ticks.should eq([1])
     result.cancelled.should be_true
     result.units_done.should eq(1)
-    result.elapsed_ms.should be < 2500
+    # The job must end promptly after cancel — not run on. Bound to the
+    # cancel moment (plus scheduler slack), not a fixed wall clock.
+    result.elapsed_ms.should be < (cancelled_at - t0).total_milliseconds + 500
   end
 
   it "pause parks the job and resume continues it" do
