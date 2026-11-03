@@ -109,7 +109,7 @@ module Positron::Plugins
       end
     end
 
-    def on_ready(host : Positron::DesktopHost)
+    def on_ready(host : Positron::Host)
       @adapter.on_click do |id|
         host.emit_to_js("notification.clicked", {id: id})
       end

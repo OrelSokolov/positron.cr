@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="crystal.positron.hello"
+    android:versionCode="1"
+    android:versionName="0.2.0">
+
+  <!-- minSdk 28: bionic gained iconv in API 28 (Crystal's String
+       encoding uses it); the static OpenSSL below is API-33-built. -->
+  <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34" />
+
+  <!-- Frontends may fetch remote resources; embedded assets never
+       leave the virtual host. -->
+  <uses-permission android:name="android.permission.INTERNET" />
+
+  <!-- libpositron_android.so is dlopen'ed by System.loadLibrary from
+       the app's lib dir. -->
+  <application
+      android:allowBackup="false"
+      android:label="Positron Hello"
+      android:icon="@drawable/icon"
+      android:extractNativeLibs="true">
+
+    <!-- One window = one Activity. configChanges keeps rotation from
+         destroying/recreating the Activity: the Crystal runtime lives
+         on a dedicated thread and cannot reboot in-process. -->
+    <activity
+        android:name="com.positron.shim.PositronActivity"
+        android:label="Positron Hello"
+        android:exported="true"
+        android:configChanges="orientation|keyboardHidden|screenSize|screenLayout"
+        android:windowSoftInputMode="adjustResize">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

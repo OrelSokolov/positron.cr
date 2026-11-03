@@ -23,3 +23,11 @@
 # crosspack pack output and staging
 /crosspacks/
 /build/
+
+# Android build artifacts (keep sources: manifest, shim, activity, script)
+/android/build/
+/android/apk/
+/android/res/
+/android/*.apk
+/android/*.idsig
+/android/debug.keystore

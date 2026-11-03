@@ -70,7 +70,7 @@ module Positron::Plugins
       end
     end
 
-    def on_ready(host : Positron::DesktopHost)
+    def on_ready(host : Positron::Host)
       if single_instance?
         spawn { listen(host) }
       else
@@ -116,7 +116,7 @@ module Positron::Plugins
       false
     end
 
-    private def listen(host : Positron::DesktopHost)
+    private def listen(host : Positron::Host)
       server = @server
       return unless server
 
@@ -128,7 +128,7 @@ module Positron::Plugins
       Log.for("positron.plugins.deep_links").error { "socket listener: #{ex.message}" }
     end
 
-    private def handle_client(client : UNIXSocket, host : Positron::DesktopHost)
+    private def handle_client(client : UNIXSocket, host : Positron::Host)
       client.read_timeout = 2.seconds
       url = client.gets.try(&.strip)
       client.close
@@ -148,7 +148,7 @@ module Positron::Plugins
       end
     end
 
-    private def deliver(url : String, host : Positron::DesktopHost)
+    private def deliver(url : String, host : Positron::Host)
       host.app.on_deep_link(url)
       Positron::EventBus.emit("deep_link.opened", JSON.parse({url: url}.to_json))
       host.emit_to_js("deep_link.opened", {url: url})

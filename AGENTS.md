@@ -9,8 +9,9 @@ runs in the OS WebView; Crystal owns all state and logic; the native
 shim (GTK/WebKitGTK on Linux) is a passive adapter. Assets embed at
 compile time into a single binary.
 
-Currently a **Linux + macOS (arm64) + Windows reference implementation**
-of the Host-Shim pattern described in `positron-architecture.md`: Linux
+Currently a **Linux + macOS (arm64) + Windows + Android (arm64)
+reference implementation** of the Host-Shim pattern described in
+`positron-architecture.md`: Linux
 uses GTK/WebKitGTK, macOS uses WKWebView/NSWindow/NSStatusItem through a
 pure-Crystal Objective-C runtime layer (`adapters/macos/objc.cr` — see the
 header comment there for the dispatch-strategy constraints of Crystal's
@@ -18,7 +19,12 @@ one-declaration-per-C-symbol rule), Windows uses WebView2 via the
 vendored `webview.dll` (`adapters/windows/`). The macOS plugin
 adapters are all real ports (notifications, clipboard, dialogs,
 file_picker, save_file_dialog, display, theme — M5.3 in `ROADMAP.md`,
-driven through the pure-Crystal ObjC runtime layer).
+driven through the pure-Crystal ObjC runtime layer). Android uses a
+plain-Java Activity + android.webkit.WebView shim with a pure-Crystal
+JNI layer (`adapters/android/jni.cr`, §7 of the architecture doc); the
+C seam `android/positron_shim.c` owns the host thread and the
+Java-thread→Crystal queue. The Android plugin adapters are partially
+real (clipboard, theme, display, preferences, lifecycle).
 `README.md` carries a status checklist (done vs missing) — keep it in sync
 with the actual state when features land.
 
@@ -27,6 +33,11 @@ with the actual state when features land.
 ```bash
 # Build all examples (writes logs to logs/)
 rake build:examples
+
+# Build the hello example as an Android APK (arm64, into android/)
+# Needs: SDK with NDK 25.2, build-tools 34+, platform 34, JDK,
+# rsvg-convert or ImageMagick
+rake build:android
 
 # Run the test suite (headless, no GUI required)
 rake spec
@@ -71,6 +82,12 @@ are flag-gated.
 - Linux: GTK 3, WebKitGTK 4.1, Ayatana AppIndicator 3 dev files,
   libnotify (notifications plugin), libsqlite3 dev files (opt-in SQLite
   plugin), rsvg-convert or ImageMagick + appimagetool (packaging)
+- Android (`rake build:android`): Android SDK with NDK 25.2
+  (`~/android-sdk/ndk/25.2.9519653`), build-tools 34+, platform
+  android-34, a JDK (javac/keytool; d8 comes from build-tools) and
+  rsvg-convert or ImageMagick (launcher icon). The static Crystal
+  runtime libs (`libgc`/`libpcre2-8`/`libevent`, arm64) are vendored
+  in `third_party/android/` — see its README.
 - macOS: Xcode command line tools (includes `codesign`, used by
   `positron package` — ad-hoc by default, `MACOS_SIGN_IDENTITY` for a
   real certificate); the adapters use the system
@@ -103,12 +120,23 @@ src/positron/
   event_loop/linux.cr   # GTK main loop + Crystal fiber integration
   event_loop/macos.cr   # NSApp run loop + CFRunLoopTimer fiber tick
   event_loop/windows.cr # Win32 message pump + WM_TIMER fiber tick
+  event_loop/android.cr # host-thread pump (drain queues + Fiber.yield)
+  mobile/               # platform-pure mobile helpers (MessageQueue,
+                        # AssetRouter) — headless-tested
+  entry/android.cr      # host-thread boot + EntryAndroid registration
   adapters/linux/       # WebKitGTK (window API, devtools, drag&drop),
                         # AppIndicator, icon
   adapters/macos/       # WKWebView/NSWindow/NSStatusItem + the pure-
                         # Crystal ObjC runtime layer (objc.cr)
   adapters/windows/     # WebView2 via vendored webview.dll, Win32,
                         # tray, WebResourceRequested COM interception
+  adapters/android/     # pure-Crystal JNI layer (jni.cr), LibShim
+                        # bindings, WebViewPort over the Java bridge,
+                        # the mobile Host routing shim events
+android/                # APK pipeline: PositronActivity.java (WebView +
+                        # PositronBridge executor), positron_shim.c (C
+                        # seam: global refs, event queue, asset
+                        # roundtrip), build_android.sh, manifest
   plugins/              # clipboard, deep_links, dialogs, display,
                         # file_picker, filesystem, keyboard, lifecycle,
                         # logger, notifications, permissions,
@@ -172,6 +200,24 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   imperative plugin calls and binary payloads.
 - **Never hand-roll `eval_js` strings to push events to the frontend** —
   use `Host#emit_to_js(event, payload)`.
+- WebView permission requests (getUserMedia camera/microphone,
+  geolocation, …) are granted by the host adapters (WebKitGTK
+  `permission-request`, WebView2 `PermissionRequested` via the COM seam,
+  Android `WebChromeClient.onPermissionRequest`) and broadcast as
+  `permission.requested`; on macOS the usage keys live in
+  `Packaging.info_plist`. Keep the platforms in parity when
+  touching permission handling.
+- **Android threading rule**: the Crystal runtime lives on ONE native
+  host thread (pthread created by `android/positron_shim.c`; boot in
+  `entry/android.cr`). Native methods run on Java threads (UI, JS
+  bridge, WebView IO) and must never touch Crystal — they only cache
+  global refs and push copied C strings through the shim queue. All
+  Crystal-side JNI calls (`adapters/android/jni.cr`) happen on the
+  host thread; UI marshalling is done on the Java side
+  (`activity.runOnUiThread` inside PositronBridge methods).
+- **Android entry**: apps register `Positron::EntryAndroid.app(App)`
+  at the toplevel under `flag?(:android)` instead of calling
+  `Application#run` (the Activity shim owns the lifecycle).
 - Examples use `embed_application_files(__DIR__, icon_path)` to bake
   HTML/CSS/JS and the icon into the binary at compile time.
 - `Application#embed_directory(dir)` bakes a whole tree (base64, binary-safe)
@@ -206,8 +252,20 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   (F12 works when running with `POSITRON_DEV=1`). Deep-link scheme
   *registration* (registry keys) is a packaging concern on Windows,
   like `.desktop` on Linux.
+- Android: embedded assets are served over the same virtual https
+  host as Windows (`https://app.positron.local/` via
+  `shouldInterceptRequest`); absolute `app://` URLs inside frontend
+  assets do not resolve — use relative paths. arm64-v8a only. Window
+  management ops raise (window = Activity, configured by the
+  manifest). Plugin adapters still stubs: file_picker,
+  save_file_dialog, notifications; secure_storage is not compiled
+  (no OpenSSL in the APK — Keystore adapter is future work). OS-level
+  permission prompts (camera/mic) are not requested from the Activity
+  yet. Under ndk_translation (arm64 app on an x86_64 emulator) the
+  Boehm GC is disabled automatically before boot (guest roots are
+  invisible to it).
 - No `dnd.files` on macOS: WKWebView consumes file drops with no
   public hook.
-- No mobile entry points (`src/positron/entry/`).
+- No iOS entry points (`src/positron/entry/` — only Android exists).
 - Multi-window is intentionally out of scope.
 - Many Tier-2+ plugins from `plugins.txt` are not yet implemented.

@@ -110,39 +110,87 @@ What is already there ✔ and what is still needed ☐:
 - [x] SQLite (direct FFI, opt-in)
 - [x] Theme / appearance (dark/light)
 - [x] Display info, keyboard events, logger, preferences
+- [x] WebView media permissions: `getUserMedia` (camera/microphone),
+      geolocation and other web permission requests are granted by the
+      host — WebKitGTK `permission-request` (Linux), WebView2
+      `PermissionRequested` (Windows), `NSCameraUsageDescription` /
+      `NSMicrophoneUsageDescription` in packaged `.app` bundles (macOS);
+      every grant is broadcast to the frontend as `permission.requested`.
+      Note: `navigator.mediaDevices` requires a secure context — serve
+      the frontend with `serve_directory` (dev) or a custom URI scheme,
+      not `load_html`
 - [ ] Local (scheduled) notifications with actions
 - [ ] Share sheet, badges, taskbar progress, global hotkeys, system sounds
 - [ ] Media & hardware plugins (camera, microphone, audio/video player,
-      geolocation, sensors, biometrics) — Tier 2+ in `plugins.txt`
+      geolocation, sensors, biometrics) — Tier 2+ in `plugins.txt`;
+      frontend `getUserMedia` already works (see media permissions above)
 
-### Mobile (non-goal for now)
+### Mobile
 
-- [ ] Android / iOS hosts — architecture supports them, deliberately
-      deferred until the desktop story is complete
+- [x] Android host (arm64): real `Adapters::Android::Host` + `WebViewPort`
+      over a Java Activity/WebView shim, pure-Crystal JNI layer
+      (`adapters/android/jni.cr`), host-thread event loop pump, C seam
+      for Java-thread events (`android/positron_shim.c`), embedded
+      assets over the virtual `https://app.positron.local/` host
+      (shouldInterceptRequest), JS bridge via `addJavascriptInterface`,
+      APK packaging without gradle (`rake build:android` — aapt/d8/
+      apksigner, vendored static Crystal runtime libs in
+      `third_party/android/`)
+- [x] Android plugin adapters: clipboard (ClipboardManager), theme
+      (UI_MODE), display (DisplayMetrics), preferences
+      (SharedPreferences), lifecycle (Activity callbacks) — the rest
+      (file_picker, save_file_dialog, notifications, secure_storage)
+      stay stubs/absent for now
+- [ ] iOS host (architecture §8 ready, not implemented)
+
+## Android
+
+Build the hello example into an APK (arm64; no gradle, no androidx):
+
+    rake build:android          # → android/positron.apk
+    adb install -r android/positron.apk
+
+Requirements: Android SDK with NDK 25.2, build-tools 34+, platform 34,
+JDK, `rsvg-convert` or ImageMagick (launcher icon). Apps register for
+the mobile entry instead of calling `Application#run`:
+
+    {% if flag?(:android) %}
+      Positron::EntryAndroid.app(HelloApp)
+    {% else %}
+      HelloApp.new.run
+    {% end %}
+
+The Crystal runtime lives on a dedicated host thread created by
+`android/positron_shim.c`; Java threads (UI, JS bridge, WebView IO)
+never touch Crystal — everything crosses the C seam as copied strings.
+Under ndk_translation (arm64 app on an x86_64 emulator) the Boehm GC
+is disabled automatically before boot.
 
 ## Platform support matrix
 
-Current status per platform: **Linux, macOS and Windows are working**;
+Current status per platform: **Linux, macOS and Windows are working;
+Android works for the core host + 5 plugin adapters** (arm64 APK).
 on macOS all plugin adapters are ported (`dnd.files` is not possible
 there — WKWebView consumes file drops with no public hook). Legend: ✅ works · 🔶 stub
 (compiles, no implementation) · ❌ not implemented (planned).
 
-| Feature | Linux | macOS | Windows |
-|---|:---:|:---:|:---:|
-| **Core (host, EventBus, commands, plugins, StateManager)** — platform-pure | ✅ | ✅ | ✅ |
-| **JS facade + TS bindings generation** — platform-pure | ✅ | ✅ | ✅ |
-| **`positron` CLI (init/build/doctor)** | ✅ | ✅ | ✅ |
-| WebView surface | ✅ WebKitGTK 4.1 | ✅ WKWebView | ✅ WebView2 (vendored `webview.dll`) |
-| Event loop | ✅ GTK + fibers | ✅ NSApp run loop + fibers | ✅ Win32 message pump + fibers |
-| System tray | ✅ AppIndicator | ✅ NSStatusItem | ✅ Shell_NotifyIcon |
-| Window management API (M3) | ✅ | ✅ | ✅ |
-| Custom URI schemes + embedded assets serving | ✅ | ✅ | ✅ (virtual https host; absolute `app://` URLs in assets unsupported) |
-| Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ✅ | ✅ |
-| Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) |
-| Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ |
-| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ |
-| Packaging | ✅ .desktop / AppImage / deb | ✅ .app + codesign (dmg pending) | ✅ MSI via `crosspack pack` |
-| `positron package` | ✅ | ✅ (`.app`; `MACOS_SIGN_IDENTITY`, `MACOS_BUNDLE_ID`) | ❌ (use `crosspack pack`) |
+| Feature | Linux | macOS | Windows | Android |
+|---|:---:|:---:|:---:|:---:|
+| **Core (host, EventBus, commands, plugins, StateManager)** — platform-pure | ✅ | ✅ | ✅ | ✅ |
+| **JS facade + TS bindings generation** — platform-pure | ✅ | ✅ | ✅ | ✅ |
+| **`positron` CLI (init/build/doctor)** | ✅ | ✅ | ✅ | — (use `rake build:android`) |
+| WebView surface | ✅ WebKitGTK 4.1 | ✅ WKWebView | ✅ WebView2 (vendored `webview.dll`) | ✅ android.webkit (Java shim) |
+| Event loop | ✅ GTK + fibers | ✅ NSApp run loop + fibers | ✅ Win32 message pump + fibers | ✅ host-thread pump + fibers |
+| System tray | ✅ AppIndicator | ✅ NSStatusItem | ✅ Shell_NotifyIcon | ❌ (no tray on mobile) |
+| Window management API (M3) | ✅ | ✅ | ✅ | 🔶 (manifest-level; ops raise) |
+| Custom URI schemes + embedded assets serving | ✅ | ✅ | ✅ (virtual https host; absolute `app://` URLs in assets unsupported) | ✅ virtual https host (same as Windows) |
+| Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ✅ | ✅ | 🔶 (devtools via `chrome://inspect` on debuggable builds) |
+| Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) | 🔶 (debuggable builds) |
+| Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ | ❌ |
+| Media permissions (`getUserMedia`) | ✅ | ✅ (packaged `.app` only — bare binaries get no system prompt) | ✅ | 🔶 (granted; OS permission prompts pending) |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ | 🔶 (clipboard/theme/display/preferences/lifecycle real; rest stubs) |
+| Packaging | ✅ .desktop / AppImage / deb | ✅ .app + codesign (dmg pending) | ✅ MSI via `crosspack pack` | ✅ APK via `rake build:android` (debug-signed) |
+| `positron package` | ✅ | ✅ (`.app`; `MACOS_SIGN_IDENTITY`, `MACOS_BUNDLE_ID`) | ❌ (use `crosspack pack`) | ❌ (use `rake build:android`) |
 
 ## Philosophy
 
@@ -654,7 +702,9 @@ Multi-window support is intentionally out of scope.
 `Host#emit_to_js(event, payload)` is the single supported channel — it
 marshals to the GUI thread and notifies all `Positron.on(event, …)`
 subscribers. Window events, `dnd.files` (drag & drop),
-`lifecycle.*`, `deep_link.opened` and plugin callbacks all use it.
+`permission.requested` (every WebView permission grant — camera,
+microphone, geolocation, …), `lifecycle.*`, `deep_link.opened` and
+plugin callbacks all use it.
 
 ## Opt-in SQLite plugin
 

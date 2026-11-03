@@ -6,6 +6,49 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Android port (arm64)**: the mobile host from
+  `positron-architecture.md` §7 is real now — `rake build:android`
+  produces an installable APK of the hello example without gradle or
+  androidx (cross-compile → NDK link → javac/d8 → aapt/apksigner).
+  - `src/positron/adapters/android/` — pure-Crystal JNI layer
+    (`jni.cr`, the objc.cr precedent: the `JNINativeInterface` table
+    generated from the NDK's jni.h, `…MethodA` variants only), the
+    `WebViewPort` over the Java bridge, the mobile host routing shim
+    events (lifecycle/deep links/permissions) into the shared
+    `Host`/EventBus plumbing, and the `LibShim` bindings.
+  - `src/positron/entry/android.cr` — host-thread boot
+    (`GC.init` → `Crystal.init_runtime` → `__crystal_main`, the
+    egui.cr android_boot recipe; automatic GC disable under
+    ndk_translation) + `Positron::EntryAndroid.app(App)` registration.
+  - `src/positron/event_loop/android.cr` — real pump: drain queues →
+    `Fiber.yield` → frame sleep; `run_on_main` over
+    `Positron::Mobile::MessageQueue`.
+  - `src/positron/mobile/` — platform-pure `MessageQueue` +
+    `AssetRouter` (path normalization, MIME table, scheme handlers),
+    covered by headless specs.
+  - `android/` — `PositronActivity.java` (WebView + PositronBridge
+    executor + shouldInterceptRequest on the virtual
+    `https://app.positron.local/` host + WebChromeClient permission
+    grants), `positron_shim.c` (the C seam: global refs, copied-string
+    event queue for Java threads, synchronous asset roundtrip),
+    `build_android.sh`, manifest; static Crystal runtime libs vendored
+    in `third_party/android/`.
+  - Android plugin adapters now real: clipboard (ClipboardManager),
+    theme (UI_MODE night), display (DisplayMetrics), preferences
+    (SharedPreferences, JSON-string values), lifecycle (Activity
+    callbacks via `window.focused`/`window.blurred` parity); dialogs
+    gained a compile stub.
+- `Plugin#on_ready` widened to accept any `Host` (was `DesktopHost`) —
+  required for the Android host to drive the same plugin lifecycle.
+
+### Changed
+
+- `secure_storage` is no longer compiled into Android builds (no
+  OpenSSL linked into the APK; the Android Keystore adapter is future
+  work). Desktop and Windows builds are unchanged.
+
 ## [0.2.0] — 2026-11-03
 
 ### Added

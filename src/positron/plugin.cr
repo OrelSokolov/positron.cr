@@ -38,7 +38,7 @@ module Positron
     end
 
     # Called once during application startup.
-    def on_ready(host : DesktopHost)
+    def on_ready(host : Host)
       # override in subclass
     end
 

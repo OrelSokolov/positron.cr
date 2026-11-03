@@ -72,6 +72,11 @@ namespace :build do
     sh "#{CRYSTAL_CMD} build #{CRYSTAL_FLAGS} src/positron/cli.cr -o bin/positron" \
       " --define positron_source_dir=#{source_dir.inspect}"
   end
+
+  desc "Build the hello example as an Android APK (arm64, into android/)"
+  task :android do
+    sh "android/build_android.sh"
+  end
 end
 
 namespace :build do

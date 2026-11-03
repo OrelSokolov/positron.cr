@@ -11,6 +11,9 @@ require "./adapter"
 {% if flag?(:win32) %}
   require "./windows"
 {% end %}
+{% if flag?(:android) %}
+  require "./android"
+{% end %}
 
 module Positron::Plugins
   # Compile-time factory that picks the correct native dialogs adapter
@@ -23,6 +26,8 @@ module Positron::Plugins
         MacOSDialogsAdapter.new
       {% elsif flag?(:win32) %}
         WindowsDialogsAdapter.new
+      {% elsif flag?(:android) %}
+        AndroidDialogsAdapter.new
       {% else %}
         {% raise "Dialogs plugin is not supported on this platform" %}
       {% end %}

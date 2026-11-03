@@ -27,9 +27,13 @@ require "./positron/plugins/permissions/plugin"
 # Unix-only plugins: deep_links binds unix sockets, secure_storage links
 # OpenSSL. Gated so Windows builds (adapter stubs) stay dependency-free.
 # deep_links (AF_UNIX, Win10+) and secure_storage (Crystal's OpenSSL
-# bindings ship as DLLs on Windows) both work on Windows now.
+# bindings ship as DLLs on Windows) both work on Windows now. Android:
+# deep_links works (bionic AF_UNIX); secure_storage stays out until the
+# Android Keystore adapter lands (no OpenSSL linked into the APK).
 {% if flag?(:unix) || flag?(:win32) %}
   require "./positron/plugins/deep_links/plugin"
+{% end %}
+{% if (flag?(:unix) && !flag?(:android)) || flag?(:win32) %}
   require "./positron/plugins/secure_storage/plugin"
 {% end %}
 require "./positron/tray_item"
@@ -77,11 +81,17 @@ require "./positron/host"
 
 # Mobile platforms
 {% if flag?(:android) %}
+  require "./positron/mobile/queue"
+  require "./positron/mobile/asset_router"
   require "./positron/mobile_host"
-  require "./positron/adapters/android/host"
   require "./positron/adapters/android/icon"
   require "./positron/adapters/android/factory"
+  require "./positron/adapters/android/jni"
+  require "./positron/adapters/android/shim"
+  require "./positron/adapters/android/webview"
+  require "./positron/adapters/android/host"
   require "./positron/event_loop/android"
+  require "./positron/entry/android"
 {% end %}
 
 {% if flag?(:ios) %}

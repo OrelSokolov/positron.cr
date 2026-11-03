@@ -284,8 +284,9 @@ on macOS and Windows with feature parity for the M4 core plugins.
 
 - **Multi-window.** Dropped by maintainer decision; revisit only with a
   bridge-envelope design (window ids) done up front.
-- **Mobile (Android/iOS).** The architecture (`positron-architecture.md`
-  §7–8) is sound; implement after the desktop story is complete.
+- **iOS.** The architecture (`positron-architecture.md` §8) is ready;
+  the Android host (§7) is implemented, iOS follows the same shape
+  when there is demand.
 - **Hot reload of Crystal code inside a running process.** Rebuild+relaunch
   (`positron dev`) is the pragmatic first step.
 - **The full `plugins.txt` catalog.** Tier 2+ plugins come from real user

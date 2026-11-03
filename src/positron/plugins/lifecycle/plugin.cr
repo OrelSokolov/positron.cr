@@ -48,7 +48,7 @@ module Positron::Plugins
       end
     end
 
-    def on_ready(host : Positron::DesktopHost)
+    def on_ready(host : Positron::Host)
       Positron::EventBus.on("window.focused") do |_payload|
         transition("resumed", host)
       end
@@ -63,7 +63,7 @@ module Positron::Plugins
       end
     end
 
-    private def transition(new_state : String, host : Positron::DesktopHost)
+    private def transition(new_state : String, host : Positron::Host)
       return if @state == new_state
       @state = new_state
       set_state("state", new_state)

@@ -88,17 +88,20 @@ class HelloApp < Positron::Application
 
     webview.load_html(application_html)
 
-    tray.set_icon(icon_source(:svg))
-    tray.set_title("Positron")
-    tray.add_or_update_item(Positron::TrayItem.new(id: 1, title: "Open"))
-    tray.add_or_update_item(Positron::TrayItem.new(id: 2, title: "Quit"))
-    tray.on_item_click do |id|
-      case id
-      when 1 then webview.show
-      when 2 then stop
+    # The system tray is desktop-only; on Android the tray port raises.
+    {% unless flag?(:android) %}
+      tray.set_icon(icon_source(:svg))
+      tray.set_title("Positron")
+      tray.add_or_update_item(Positron::TrayItem.new(id: 1, title: "Open"))
+      tray.add_or_update_item(Positron::TrayItem.new(id: 2, title: "Quit"))
+      tray.on_item_click do |id|
+        case id
+        when 1 then webview.show
+        when 2 then stop
+        end
       end
-    end
-    tray.show
+      tray.show
+    {% end %}
   end
 
   @[Positron::Command]
@@ -116,4 +119,10 @@ class HelloApp < Positron::Application
   end
 end
 
-HelloApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(HelloApp)
+{% else %}
+  HelloApp.new.run
+{% end %}
