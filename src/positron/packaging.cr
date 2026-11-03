@@ -132,7 +132,10 @@ module Positron
     end
 
     # Render the Info.plist for a macOS .app bundle. `icon_name` adds a
-    # CFBundleIconFile entry pointing into Contents/Resources.
+    # CFBundleIconFile entry pointing into Contents/Resources. Camera and
+    # microphone usage descriptions are always included — WKWebView only
+    # shows the system capture prompt for a bundled app that declares
+    # them (a missing key = silent denial of getUserMedia).
     def self.info_plist(bundle_id : String, app_name : String,
                         executable : String, version : String = "1.0",
                         icon_name : String? = nil) : String
@@ -156,6 +159,10 @@ module Positron
           <string>#{version}</string>
           <key>NSHighResolutionCapable</key>
           <true/>
+          <key>NSCameraUsageDescription</key>
+          <string>This app can use the camera when a page requests it.</string>
+          <key>NSMicrophoneUsageDescription</key>
+          <string>This app can use the microphone when a page requests it.</string>
         #{icon_entry}</dict>
         </plist>
       PLIST

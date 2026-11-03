@@ -25,17 +25,30 @@ module Positron
         Log = ::Log.for("positron.adapters.webview2.com")
 
         # --- vtable slots (0-based; 0-2 are IUnknown) ---
-        CONTROLLER_GET_CORE_WEBVIEW2 = 25 # ICoreWebView2Controller
-        CORE_ADD_WEBRESOURCE_REQUESTED = 55 # ICoreWebView2
+        CONTROLLER_GET_CORE_WEBVIEW2          = 25 # ICoreWebView2Controller
+        CORE_ADD_WEBRESOURCE_REQUESTED        = 55 # ICoreWebView2
         CORE_ADD_WEBRESOURCE_REQUESTED_FILTER = 57
-        CORE2_GET_ENVIRONMENT = 67 # ICoreWebView2_2
-        ENV_CREATE_WEBRESOURCE_RESPONSE = 4 # ICoreWebView2Environment
-        ARGS_GET_REQUEST   = 3 # ICoreWebView2WebResourceRequestedEventArgs
-        ARGS_PUT_RESPONSE  = 5
-        REQUEST_GET_URI    = 3 # ICoreWebView2WebResourceRequest
-        STREAM_RELEASE     = 2 # IStream (IUnknown)
+        CORE_ADD_PERMISSION_REQUESTED         = 23 # ICoreWebView2
+        CORE2_GET_ENVIRONMENT                 = 67 # ICoreWebView2_2
+        ENV_CREATE_WEBRESOURCE_RESPONSE       =  4 # ICoreWebView2Environment
+        ARGS_GET_REQUEST                      =  3 # ICoreWebView2WebResourceRequestedEventArgs
+        ARGS_PUT_RESPONSE                     =  5
+        REQUEST_GET_URI                       =  3 # ICoreWebView2WebResourceRequest
+        STREAM_RELEASE                        =  2 # IStream (IUnknown)
+        PERM_ARGS_GET_PERMISSION_KIND         =  4 # ICoreWebView2PermissionRequestedEventArgs
+        PERM_ARGS_PUT_STATE                   =  7
 
         RESOURCE_CONTEXT_ALL = 0_u32
+
+        # COREWEBVIEW2_PERMISSION_STATE_ALLOW — put_State's answer for
+        # "grant without the native prompt" (DEFAULT=0, ALLOW=1, DENY=2).
+        PERMISSION_STATE_ALLOW = 1_i32
+
+        # COREWEBVIEW2_PERMISSION_KIND names, index-addressed.
+        PERMISSION_KINDS = {"unknown", "microphone", "camera", "geolocation",
+                            "notifications", "other_sensors", "clipboard_read",
+                            "multiple_automatic_downloads", "file_read_write",
+                            "autoplay", "local_fonts"}
 
         # GUIDs in memory layout (little-endian first three fields).
         # NOTE: these must stay Slices — a constant holding only
@@ -60,6 +73,12 @@ module Positron
         IID_WEBRESOURCE_REQUESTED_HANDLER = Bytes[
           0x4C_u8, 0xB7, 0x00, 0xAB, 0xF1, 0x15, 0x46, 0x46,
           0x80, 0xE8, 0xE7, 0x63, 0x41, 0xD2, 0x5D, 0x71,
+        ]
+
+        # {0x15E1C6A3,0xC72A,0x4DF3,{0x91,0xD7,0xD0,0x97,0xFB,0xEC,0x6B,0xFD}}
+        IID_PERMISSION_REQUESTED_HANDLER = Bytes[
+          0xA3_u8, 0xC6, 0xE1, 0x15, 0x2A, 0xC7, 0xF3, 0x4D,
+          0x91, 0xD7, 0xD0, 0x97, 0xFB, 0xEC, 0x6B, 0xFD,
         ]
 
         @[Link("ole32")]
@@ -191,6 +210,84 @@ module Positron
             return false
           end
           true
+        end
+
+        # --- the PermissionRequested handler (getUserMedia etc.) ---
+        #
+        # Same two-pointer handler shape as above, its own vtable and IID.
+        # WebView2 denies permission requests (camera/microphone via
+        # getUserMedia, geolocation, notifications, …) unless the host
+        # answers the PermissionRequested event; on desktop the app runs
+        # with the user's rights, so every request is granted without the
+        # native prompt and broadcast as `permission.requested` (parity
+        # with the Linux adapter's `permission-request` handler).
+
+        PERM_QI_FN = ->(this : Void*, riid : UInt8*, ppv : Void**) : Int32 do
+          if guid_matches(riid, IID_IUNKNOWN) ||
+             guid_matches(riid, IID_PERMISSION_REQUESTED_HANDLER)
+            ppv.value = this
+            0
+          else
+            ppv.value = Pointer(Void).null
+            0x80004002_u32.to_i32! # E_NOINTERFACE
+          end
+        end
+
+        PERM_INVOKE_FN = ->(this : Void*, sender : Void*, args : Void*) : Int32 do
+          box = (this.as(Pointer(Void*)) + 1).value
+          adapter = Box(WebView2).unbox(box)
+          adapter.handle_permission_requested(args)
+          0
+        rescue ex
+          Log.error { "PermissionRequested handler: #{ex.message}" }
+          0
+        end
+
+        @@perm_vtbl : Void*?
+
+        private def self.permission_handler_vtbl : Void*
+          @@perm_vtbl ||= begin
+            vtbl = Pointer(Void*).malloc(4)
+            vtbl[0] = PERM_QI_FN.pointer.as(Void*)
+            vtbl[1] = ADDREF_FN.pointer.as(Void*)
+            vtbl[2] = RELEASE_FN.pointer.as(Void*)
+            vtbl[3] = PERM_INVOKE_FN.pointer.as(Void*)
+            vtbl.as(Void*)
+          end
+        end
+
+        def self.install_permission_handler(core : Void*, adapter : WebView2) : Bool
+          obj = Pointer(Void*).malloc(2)
+          obj[0] = permission_handler_vtbl
+          obj[1] = Box.box(adapter)
+          objects << obj.as(Void*)
+
+          token = Pointer(UInt64).malloc(1)
+          fn = slot(core, CORE_ADD_PERMISSION_REQUESTED)
+          add = Proc(Void*, Void*, UInt64*, Int32).new(fn, Pointer(Void).null)
+          hr = add.call(core, obj.as(Void*), token)
+          if hr < 0
+            Log.warn { "add_PermissionRequested hr=#{hr}" }
+            return false
+          end
+          true
+        end
+
+        # --- called by the adapter from PERM_INVOKE_FN (UI thread) ---
+
+        def self.permission_kind(args : Void*) : String
+          kind = Pointer(Int32).malloc(1)
+          fn = slot(args, PERM_ARGS_GET_PERMISSION_KIND)
+          get = Proc(Void*, Int32*, Int32).new(fn, Pointer(Void).null)
+          return "unknown" unless get.call(args, kind) >= 0
+          PERMISSION_KINDS[kind.value]? || "unknown"
+        end
+
+        def self.allow_permission(args : Void*) : Nil
+          fn = slot(args, PERM_ARGS_PUT_STATE)
+          put = Proc(Void*, Int32, Int32).new(fn, Pointer(Void).null)
+          hr = put.call(args, PERMISSION_STATE_ALLOW)
+          Log.warn { "put_State(ALLOW) hr=#{hr}" } if hr < 0
         end
 
         # --- called by the adapter from INVOKE_FN (UI thread) ---

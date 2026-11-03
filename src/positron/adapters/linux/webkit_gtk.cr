@@ -18,6 +18,7 @@ module Positron
         @user_content_manager : Void*
         @callback : Proc(String, String)?
         @message_handler : Proc(Void*, Void*, Void*, Nil)?
+        @permission_handler : Proc(Void*, Void*, Void*, Nil)?
         @delete_handler : Proc(Void*, Void*, Void*, Int32)?
         @configure_handler : Proc(Void*, Void*, Void*, Int32)?
         @press_handler : Proc(Void*, Void*, Void*, Int32)?
@@ -95,6 +96,8 @@ module Positron
 
           LibGTK.gtk_container_add(@window, @web_view)
 
+          connect_permission_requests
+
           connect_frameless_drag if @frameless
         end
 
@@ -169,8 +172,8 @@ module Positron
 
         # --- Frameless CSS-drag (Wails --wails-draggable analogue) ---
 
-        GDK_BUTTON_PRESS    = 4
-        GDK_2BUTTON_PRESS   = 5
+        GDK_BUTTON_PRESS  = 4
+        GDK_2BUTTON_PRESS = 5
 
         # Connects the button-press hook for CSS-driven window dragging:
         # a press on an element whose computed style (or an ancestor's)
@@ -252,6 +255,41 @@ module Positron
             return 'no';
           })()
           JS
+
+        # --- WebView permission requests (getUserMedia etc.) ---
+        #
+        # WebKitGTK denies permission requests (camera/microphone via
+        # `navigator.mediaDevices.getUserMedia`, geolocation, pointer lock,
+        # …) unless the app answers the `permission-request` signal. On
+        # desktop the app runs with the user's rights (the permissions
+        # plugin's semantics), so every request is granted and broadcast
+        # as `permission.requested` for observability.
+        private def connect_permission_requests
+          @permission_handler = ->(web_view : Void*, request : Void*, data : Void*) do
+            webkit = Box(WebKitGTK).unbox(data)
+            webkit.handle_permission_request(request)
+            nil
+          end
+
+          LibGObject.g_signal_connect_data(
+            @web_view,
+            "permission-request",
+            @permission_handler.not_nil!.pointer.as(Void*),
+            boxed_self,
+            nil,
+            0
+          )
+        end
+
+        protected def handle_permission_request(request : Void*) : Nil
+          type_name = String.new(LibGObject.g_type_name_from_instance(request))
+          LibWebKit.webkit_permission_request_allow(request)
+          Log.info { "webkit: granted #{type_name} permission request" }
+          Positron::EventBus.emit(
+            "permission.requested",
+            JSON.parse({type: type_name, granted: true}.to_json)
+          )
+        end
 
         protected def quit_event_loop
           LibGTK.gtk_main_quit
@@ -602,6 +640,7 @@ module Positron
             destroy_data : Void*,
             connect_flags : Int32,
           ) : UInt64
+          fun g_type_name_from_instance(instance : Void*) : LibC::Char*
         end
 
         @[Link("webkit2gtk-4.1")]
@@ -631,6 +670,7 @@ module Positron
           fun webkit_uri_scheme_request_get_uri(request : Void*) : LibC::Char*
           fun webkit_uri_scheme_request_get_path(request : Void*) : LibC::Char*
           fun webkit_uri_scheme_request_finish(request : Void*, stream : Void*, stream_length : Int64, content_type : LibC::Char*)
+          fun webkit_permission_request_allow(request : Void*)
         end
 
         @[Link("gio-2.0")]

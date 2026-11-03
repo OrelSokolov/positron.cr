@@ -165,7 +165,8 @@ module Positron
       # frontend so JS can subscribe with
       # Positron.on("window.resized", ...) / Positron.on("dnd.files", ...).
       {"window.resized", "window.moved", "window.maximized", "window.unmaximized",
-       "window.fullscreened", "window.unfullscreened", "dnd.files"}.each do |event|
+       "window.fullscreened", "window.unfullscreened", "dnd.files",
+       "permission.requested"}.each do |event|
         EventBus.on(event) do |payload|
           emit_to_js(event, payload)
         end

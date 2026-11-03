@@ -101,6 +101,7 @@ module Positron
           @hwnd = Pointer(Void).null
           @original_wndproc = Pointer(Void).null
         end
+
         def create(config : WebViewConfig)
           LibWebview.load!
 
@@ -232,10 +233,10 @@ module Positron
 
         # Runs as a fiber on the main thread: sleeps (yielding to the
         # message pump) until webview.dll has created the WebView2
-        # controller, then installs the request interception and flushes
-        # any held-back navigation.
+        # controller, then installs the request interception and the
+        # permission handler, and flushes any held-back navigation.
         private def apply_scheme_handlers_when_ready : Nil
-          return if @scheme_handlers.empty? || @scheme_apply_started
+          return if @scheme_apply_started
           @scheme_apply_started = true
 
           controller = Pointer(Void).null
@@ -255,6 +256,7 @@ module Positron
           else
             Log.warn { "custom schemes unavailable: no ICoreWebView2/Environment" }
           end
+          WebView2Com.install_permission_handler(core, self) if core
           @schemes_applied = true
 
           if url = @pending_url
@@ -301,6 +303,20 @@ module Positron
             WebView2Com.respond(args, @com_env, nil,
               "text/plain; charset=utf-8", 200, "OK")
           end
+        end
+
+        # PERM_INVOKE_FN (UI thread, inside the message pump): grant the
+        # request without the native prompt and notify the app — the same
+        # desktop semantics as the permissions plugin and the Linux
+        # adapter's permission-request handler.
+        protected def handle_permission_requested(args : Void*) : Nil
+          kind = WebView2Com.permission_kind(args)
+          WebView2Com.allow_permission(args)
+          Log.info { "webview2: granted #{kind} permission request" }
+          Positron::EventBus.emit(
+            "permission.requested",
+            JSON.parse({type: kind, granted: true}.to_json)
+          )
         end
 
         # --- Window management (WebViewPort) ---
