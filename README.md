@@ -113,9 +113,14 @@ What is already there ✔ and what is still needed ☐:
 - [x] WebView media permissions: `getUserMedia` (camera/microphone),
       geolocation and other web permission requests are granted by the
       host — WebKitGTK `permission-request` (Linux), WebView2
-      `PermissionRequested` (Windows), `NSCameraUsageDescription` /
-      `NSMicrophoneUsageDescription` in packaged `.app` bundles (macOS);
-      every grant is broadcast to the frontend as `permission.requested`.
+      `PermissionRequested` (Windows), WKUIDelegate
+      `requestMediaCapturePermissionFor…` (macOS); every grant is
+      broadcast to the frontend as `permission.requested`.
+      macOS additionally needs a `.app` bundle declaring
+      `NSCameraUsageDescription` / `NSMicrophoneUsageDescription` (TCC
+      attributes capture to the "responsible process" — a bare binary
+      inherits the terminal's identity and the OS prompt never shows;
+      `rake build:camera_app` wraps the camera example into one).
       Note: `navigator.mediaDevices` requires a secure context — serve
       the frontend with `serve_directory` (dev) or a custom URI scheme,
       not `load_html`
@@ -509,7 +514,10 @@ examples/
     frontend/                            # HTML/CSS/JS assets
   camera/                                # getUserMedia live preview over
     camera.cr                            # the app:// scheme (embedded
-    frontend/                            # tree; permission grants)
+    frontend/                            # tree; permission grants) —
+                                         # on macOS run via
+                                         # rake build:camera_app (needs
+                                         # a bundled NSCameraUsage…)
   scheduler_demo/                        # CPU burn vs cooperative
     scheduler_demo.cr                    # scheduler: freeze / yield /
     burn.cr                              # subprocess strategies

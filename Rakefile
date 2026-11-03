@@ -77,6 +77,11 @@ namespace :build do
   task :android do
     sh "android/build_android.sh"
   end
+
+  desc "macOS only: bundle the camera example into a .app (camera needs a bundled NSCameraUsageDescription)"
+  task :camera_app do
+    sh "scripts/make_camera_app.sh"
+  end
 end
 
 namespace :build do

@@ -154,6 +154,17 @@ module Positron
           send1(cls("NSNumber"), sel("numberWithBool:"), bool_arg(value))
         end
 
+        # Invoke an Objective-C block literal taking one pointer-sized
+        # argument — WebKit hands delegate answers back through such
+        # blocks (e.g. the WKPermissionDecision decision handlers). The
+        # third word of a block literal is its invoke function, whose
+        # implicit first argument is the block itself.
+        def call_block1(block : Void*, arg : Void*) : Nil
+          return if block.null?
+          invoke = (block.as(UInt8*) + 16).as(Pointer(Void*)).value
+          Proc(Void*, Void*, Nil).new(invoke, Pointer(Void).null).call(block, arg)
+        end
+
         # --- Autorelease pools ---
         # AppKit calls produce autoreleased objects; keep them bounded
         # by draining a pool per event loop tick (and around setup).

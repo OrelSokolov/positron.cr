@@ -31,6 +31,7 @@ module Positron
         @wk_view : Void*?
         @user_controller : Void*?
         @delegate_obj : Void*?
+        @ui_delegate_obj : Void*?
         @message_handler_obj : Void*?
         @scheme_handler_obj : Void*?
         @callback : Proc(String, String)?
@@ -44,6 +45,7 @@ module Positron
         # IMP proc objects — kept alive so the C function pointers stay
         # valid for the lifetime of the process.
         @@message_imp : Proc(Void*, Void*, Void*, Void*, Nil)?
+        @@media_permission_imp : Proc(Void*, Void*, Void*, Void*, Void*, Void*, Void*, Nil)?
         @@scheme_start_imp : Proc(Void*, Void*, Void*, Void*, Nil)?
         @@scheme_stop_imp : Proc(Void*, Void*, Void*, Void*, Nil)?
         @@should_close_imp : Proc(Void*, Void*, Void*, Bool)?
@@ -102,6 +104,9 @@ module Positron
             ObjC.invoke_rect3(
               @wk_view.not_nil!, "initWithFrame:configuration:", rect, wk_config)
             ObjC.send1(window, ObjC.sel("setContentView:"), @wk_view.not_nil!)
+
+            @ui_delegate_obj = build_ui_delegate
+            ObjC.send1(wk_view, ObjC.sel("setUIDelegate:"), @ui_delegate_obj.not_nil!)
 
             @close_to_tray = config.close_to_tray
             @ns_window = window
@@ -333,6 +338,50 @@ module Positron
         end
 
         # --- ObjC handler objects ---
+
+        # Builds a WKUIDelegate granting media-capture (getUserMedia)
+        # requests — macOS parity with the Linux adapter's
+        # `permission-request` and the Windows adapter's
+        # `PermissionRequested` handlers. Without
+        # `requestMediaCapturePermissionFor…` WKWebView denies
+        # getUserMedia outright; with the grant the OS-level TCC prompt
+        # still applies, and that one requires the app to run inside a
+        # bundle declaring NSCameraUsageDescription /
+        # NSMicrophoneUsageDescription (see Packaging.info_plist and
+        # scripts/make_camera_app.sh — a bare binary inherits the
+        # terminal's TCC identity and fails).
+        private def build_ui_delegate : Void*
+          objc_class = ObjC.new_class("PositronWKUIDelegate")
+          ObjC.add_protocol(objc_class, "WKUIDelegate")
+
+          @@media_permission_imp = ->(objc_self : Void*, _cmd : Void*, web_view : Void*, origin : Void*, frame : Void*, capture_type : Void*, decision : Void*) {
+            # WKMediaCaptureType: 0 = camera, 1 = microphone,
+            # 2 = camera + microphone.
+            kind = case capture_type.address
+                   when 0 then "camera"
+                   when 1 then "microphone"
+                   when 2 then "camera+microphone"
+                   else        "media"
+                   end
+            # WKPermissionDecisionGrant (= 1); the argument is an
+            # NSInteger enum, passed pointer-sized through call_block1.
+            ObjC.call_block1(decision, ObjC.int_arg(1))
+            Log.info { "wkwebview: granted #{kind} capture permission" }
+            Positron::EventBus.emit(
+              "permission.requested",
+              JSON.parse({type: kind, granted: true}.to_json)
+            )
+          }
+          LibObjC.class_addMethod(
+            objc_class,
+            ObjC.sel("webView:requestMediaCapturePermissionForOrigin:initiatedByFrame:type:decisionHandler:"),
+            @@media_permission_imp.not_nil!.pointer.as(Void*),
+            "v@:@@@q@?")
+
+          delegate = ObjC.send0(objc_class, ObjC.sel("new"))
+          ObjC.bind_target(delegate, self)
+          delegate
+        end
 
         # Builds an NSObject subclass implementing
         # `userContentController:didReceiveScriptMessage:` and points it

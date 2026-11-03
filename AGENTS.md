@@ -39,6 +39,10 @@ rake build:examples
 # rsvg-convert or ImageMagick
 rake build:android
 
+# macOS only: wrap the camera example into a .app bundle (camera
+# capture needs a bundled NSCameraUsageDescription — see below)
+rake build:camera_app
+
 # Run the test suite (headless, no GUI required)
 rake spec
 
@@ -203,9 +207,13 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
 - WebView permission requests (getUserMedia camera/microphone,
   geolocation, …) are granted by the host adapters (WebKitGTK
   `permission-request`, WebView2 `PermissionRequested` via the COM seam,
-  Android `WebChromeClient.onPermissionRequest`) and broadcast as
-  `permission.requested`; on macOS the usage keys live in
-  `Packaging.info_plist`. Keep the platforms in parity when
+  WKUIDelegate `requestMediaCapturePermissionFor…` on macOS, Android
+  `WebChromeClient.onPermissionRequest`) and broadcast as
+  `permission.requested`. On macOS the OS-level TCC prompt additionally
+  requires the app to run inside a bundle with the usage keys
+  (`Packaging.info_plist` always includes them; for the example use
+  `rake build:camera_app` — a bare binary inherits the terminal's TCC
+  identity and the prompt never shows). Keep the platforms in parity when
   touching permission handling.
 - **Android threading rule**: the Crystal runtime lives on ONE native
   host thread (pthread created by `android/positron_shim.c`; boot in
