@@ -56,11 +56,35 @@ def build_example(name)
 
   if status.success?
     puts colorize("  [SUCCESS] #{name} (#{elapsed.round(2)}s)", :green)
+    bundle_macos_media_example(name) if darwin? && name == "camera"
     :success
   else
     puts colorize("  [FAILED]  #{name} (#{elapsed.round(2)}s)", :red)
     puts colorize("            log: #{log_path}", :gray)
     :failed
+  end
+end
+
+def darwin?
+  RUBY_PLATFORM.include?("darwin")
+end
+
+# Examples whose TCC-dependent features (camera capture) only work
+# inside a bundled .app (usage keys in Info.plist) — wrapped
+# automatically on macOS after a successful build, with a warning
+# about the bare binary.
+def bundle_macos_media_example(name)
+  app_name = "Positron#{name.capitalize}"
+  binary = File.join("examples", name, name)
+  puts colorize("  Bundling #{name} → builds/macos/#{app_name}.app " \
+                "(macOS camera capture needs a bundled NSCameraUsageDescription)...", :cyan)
+  if system(File.join(__dir__, "scripts", "create_bundle.sh"), binary, app_name)
+    puts colorize("  [WARN] run the demo from the bundle: open builds/macos/#{app_name}.app — " \
+                  "the bare binary inherits the terminal's TCC identity and the OS camera " \
+                  "prompt will never show", :yellow)
+  else
+    puts colorize("  [WARN] bundling failed — the bare examples/#{name}/#{name} will not " \
+                  "get the OS camera permission prompt", :red)
   end
 end
 
@@ -80,7 +104,7 @@ namespace :build do
 
   desc "macOS only: bundle the camera example into a .app (camera needs a bundled NSCameraUsageDescription)"
   task :camera_app do
-    sh "scripts/make_camera_app.sh"
+    build_example("camera") # bundles + warns automatically on macOS
   end
 end
 

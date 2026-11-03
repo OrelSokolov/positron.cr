@@ -40,7 +40,9 @@ rake build:examples
 rake build:android
 
 # macOS only: wrap the camera example into a .app bundle (camera
-# capture needs a bundled NSCameraUsageDescription — see below)
+# capture needs a bundled NSCameraUsageDescription — see below).
+# rake build:examples bundles it automatically on macOS; this task
+# rebuilds binary + bundle on demand
 rake build:camera_app
 
 # Run the test suite (headless, no GUI required)
@@ -211,10 +213,12 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   `WebChromeClient.onPermissionRequest`) and broadcast as
   `permission.requested`. On macOS the OS-level TCC prompt additionally
   requires the app to run inside a bundle with the usage keys
-  (`Packaging.info_plist` always includes them; for the example use
-  `rake build:camera_app` — a bare binary inherits the terminal's TCC
-  identity and the prompt never shows). Keep the platforms in parity when
-  touching permission handling.
+  (`Packaging.info_plist` always includes them; wrap any binary with
+  `scripts/create_bundle.sh <binary> [name]` — `rake build:examples`
+  does it automatically for the camera example on macOS, and
+  `rake build:camera_app` rebuilds it on demand — a bare binary
+  inherits the terminal's TCC identity and the prompt never shows).
+  Keep the platforms in parity when touching permission handling.
 - **Android threading rule**: the Crystal runtime lives on ONE native
   host thread (pthread created by `android/positron_shim.c`; boot in
   `entry/android.cr`). Native methods run on Java threads (UI, JS
