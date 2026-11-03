@@ -154,9 +154,15 @@ What is already there ✔ and what is still needed ☐:
       `third_party/android/`)
 - [x] Android plugin adapters: clipboard (ClipboardManager), theme
       (UI_MODE), display (DisplayMetrics), preferences
-      (SharedPreferences), lifecycle (Activity callbacks) — the rest
-      (file_picker, save_file_dialog, notifications, secure_storage)
-      stay stubs/absent for now
+      (SharedPreferences), lifecycle (Activity callbacks),
+      file_picker + save_file_dialog (SAF pickers over the JNI bridge,
+      results ride the shim event queue through
+      `Adapters::Android::AsyncBridge`), dialogs (AlertDialog;
+      confirm/prompt async — the answer arrives as `dialog_result`),
+      notifications (NotificationManager + `POST_NOTIFICATIONS` on
+      API 33+, click/action events) and permissions (real runtime
+      permission check/request) — secure_storage stays absent for now
+      (Android Keystore adapter is future work)
 - [x] iOS simulator host (`rake build:ios`, arm64): WKWebView inside a
       UIWindow through a pure-Crystal ObjC runtime layer (port of the
       macOS adapters), `UIApplicationMain` entered from the event loop,
@@ -196,7 +202,7 @@ is disabled automatically before boot.
 ## Platform support matrix
 
 Current status per platform: **Linux, macOS and Windows are working;
-Android works for the core host + 5 plugin adapters** (arm64 APK).
+Android works for the core host + 10 plugin adapters** (arm64 APK).
 on macOS all plugin adapters are ported (`dnd.files` is not possible
 there — WKWebView consumes file drops with no public hook). Legend: ✅ works · 🔶 stub
 (compiles, no implementation) · ❌ not implemented (planned).
@@ -214,8 +220,8 @@ there — WKWebView consumes file drops with no public hook). Legend: ✅ works 
 | Dev mode / live reload (`POSITRON_DEV=1`) | ✅ | ✅ | ✅ | 🔶 (devtools via `chrome://inspect` on debuggable builds) |
 | Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) | 🔶 (debuggable builds) |
 | Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ | ❌ |
-| Media permissions (`getUserMedia`) | ✅ | ✅ (packaged `.app` only — bare binaries get no system prompt) | ✅ | 🔶 (granted; OS permission prompts pending) |
-| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ | 🔶 (clipboard/theme/display/preferences/lifecycle/camera real; rest stubs) |
+| Media permissions (`getUserMedia`) | ✅ | ✅ (packaged `.app` only — bare binaries get no system prompt) | ✅ | ✅ (WebView grants; OS runtime permissions via the permissions plugin) |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ | 🔶 (clipboard/theme/display/preferences/lifecycle/file_picker/save_file_dialog/dialogs/notifications/permissions real; secure_storage absent — Keystore future work) |
 | Packaging | ✅ .desktop / AppImage / deb | ✅ .app + codesign (dmg pending) | ✅ MSI via `crosspack pack` | ✅ APK via `rake build:android` (debug-signed) |
 | `positron package` | ✅ | ✅ (`.app`; `MACOS_SIGN_IDENTITY`, `MACOS_BUNDLE_ID`) | ❌ (use `crosspack pack`) | ❌ (use `rake build:android`) |
 

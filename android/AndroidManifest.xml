@@ -12,6 +12,17 @@
        leave the virtual host. -->
   <uses-permission android:name="android.permission.INTERNET" />
 
+  <!-- System notifications (API 33+ runtime permission; the
+       notifications plugin requests it on first send). -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <!-- WebView getUserMedia parity with the desktop adapters: the
+       WebView-level request is granted by the Activity, but the OS
+       requires the app to hold these; the permissions plugin requests
+       them at runtime when the frontend asks. -->
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
   <!-- libpositron_android.so is dlopen'ed by System.loadLibrary from
        the app's lib dir. -->
   <application

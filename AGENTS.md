@@ -23,8 +23,15 @@ driven through the pure-Crystal ObjC runtime layer). Android uses a
 plain-Java Activity + android.webkit.WebView shim with a pure-Crystal
 JNI layer (`adapters/android/jni.cr`, §7 of the architecture doc); the
 C seam `android/positron_shim.c` owns the host thread and the
-Java-thread→Crystal queue. The Android plugin adapters are partially
-real (clipboard, theme, display, preferences, lifecycle). iOS follows
+Java-thread→Crystal queue. The Android plugin adapters are real
+(clipboard, theme, display, preferences, lifecycle, file_picker and
+save_file_dialog over the SAF pickers, dialogs over AlertDialog,
+notifications via NotificationManager, permissions via runtime
+permission check/request) — async native roundtrips (SAF picks,
+dialog answers) ride the shim event queue and are completed by
+`Adapters::Android::AsyncBridge` on the GUI fiber; adapters expose
+callback overloads (blocking #pick/#save/#confirm/#prompt would
+deadlock the event-loop pump, which is the GUI fiber). iOS follows
 the **desktop** model, not the Android one: Crystal owns the main
 thread, `EventLoop::IOS#run` hands the process to `UIApplicationMain`
 and the WKWebView adapters (`adapters/ios/`) are a port of the macOS
@@ -332,12 +339,11 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   `shouldInterceptRequest`); absolute `app://` URLs inside frontend
   assets do not resolve — use relative paths. arm64-v8a only. Window
   management ops raise (window = Activity, configured by the
-  manifest). Plugin adapters still stubs: file_picker,
-  save_file_dialog, notifications; secure_storage is not compiled
-  (no OpenSSL in the APK — Keystore adapter is future work). OS-level
-  permission prompts (camera/mic) are not requested from the Activity
-  yet. Under ndk_translation (arm64 app on an x86_64 emulator) the
-  Boehm GC is disabled automatically before boot (guest roots are
+  manifest). secure_storage is not compiled (no OpenSSL in the APK —
+  Keystore adapter is future work). Notification tap/action events
+  only arrive while the host process lives (dynamically registered
+  receiver). Under ndk_translation (arm64 app on an x86_64 emulator)
+  the Boehm GC is disabled automatically before boot (guest roots are
   invisible to it).
 - No `dnd.files` on macOS: WKWebView consumes file drops with no
   public hook.

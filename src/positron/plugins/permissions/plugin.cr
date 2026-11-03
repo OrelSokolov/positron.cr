@@ -1,21 +1,32 @@
 require "json"
+require "log"
+require "./adapter"
+require "./factory"
 
 module Positron::Plugins
   # Permissions manager plugin.
   #
   # Exposes to the frontend:
   #   - permissions.check(permission)  → { state: "granted"|"denied"|"prompt" }
-  #   - permissions.request(permission) → { state: "granted"|"denied" }
+  #   - permissions.request(permission) → { state: ... }
   #
-  # On desktop the model is trivial: the app runs with the user's rights,
-  # so every permission reports "granted". Mobile hosts override this
-  # plugin later with real OS permission flows — the API shape stays
+  # Known permission names: notifications, clipboard, files, camera,
+  # microphone, location, contacts, calendar.
+  #
+  # Desktop semantics: the app runs with the user's rights, so every
+  # permission reports "granted". On Android the adapter talks to the
+  # real runtime-permission flow: `request` returns the state at call
+  # time and, when the OS dialog is async, the user's answer arrives
+  # later as a `permission.changed` event to the frontend (forwarded
+  # from the host's `permission.result` event). The API shape stays
   # stable so frontends can be written once.
-  #
-  # Known permission names (desktop semantics):
-  #   notifications, clipboard, files, camera, microphone, location,
-  #   contacts, calendar
   class Permissions < Positron::Plugin
+    @adapter : PermissionsAdapter
+
+    def initialize
+      @adapter = PermissionsAdapterFactory.create
+    end
+
     def name : String
       "permissions"
     end
@@ -44,24 +55,36 @@ module Positron::Plugins
         permission = str(request.args, "permission")
         Positron::CommandResult.new(
           success: true,
-          data: granted_state(permission)
+          data: state_for(permission, @adapter.check(permission))
         )
       end
 
       registry.register("permissions.request") do |request|
         permission = str(request.args, "permission")
-        Positron::EventBus.emit("permission.changed", JSON.parse(
-          {permission: permission, state: "granted"}.to_json
-        ))
+        perm_state = @adapter.request(permission)
+        Positron::EventBus.emit("permission.changed",
+          JSON.parse({permission: permission, state: perm_state}.to_json))
         Positron::CommandResult.new(
           success: true,
-          data: granted_state(permission)
+          data: state_for(permission, perm_state)
         )
       end
     end
 
-    private def granted_state(permission : String) : JSON::Any
-      JSON.parse({state: "granted", permission: permission}.to_json)
+    # OS-level answers (Android runtime dialogs) arrive after #request
+    # returned — forward them to the frontend as permission.changed.
+    def on_ready(host : Positron::Host)
+      Positron::EventBus.on("permission.result") do |payload|
+        permission = payload["permission"]?.try(&.as_s?) || ""
+        next if permission.empty?
+        state = payload["granted"]?.try(&.as?(Bool)) == true ? "granted" : "denied"
+        host.emit_to_js("permission.changed",
+          {permission: permission, state: state})
+      end
+    end
+
+    private def state_for(permission : String, state : String) : JSON::Any
+      JSON.parse({state: state, permission: permission}.to_json)
     end
 
     private def str(args : JSON::Any, key : String) : String

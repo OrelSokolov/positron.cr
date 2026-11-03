@@ -70,7 +70,7 @@ module Positron::Plugins
 
       host.run_on_main do
         begin
-          channel.send(@adapter.save(suggested_name, content))
+          @adapter.save(suggested_name, content) { |path| channel.send(path) }
         rescue ex
           Log.error { "save_file_dialog adapter error: #{ex.message}" }
           channel.send(nil)

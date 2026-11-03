@@ -1,4 +1,5 @@
 require "log"
+require "./async_bridge"
 require "./jni"
 require "./shim"
 require "./webview"
@@ -137,6 +138,22 @@ module Positron
               @app.on_permission_result(permission, granted) unless permission.empty?
               EventBus.emit("permission.result", parsed)
             end
+          when "saf_result", "dialog_result"
+            # Async native roundtrips (SAF pickers, native dialogs):
+            # hand the raw payload to the registered continuation.
+            seq = begin
+              JSON.parse(payload)["seq"]?.try(&.as_i?)
+            rescue JSON::ParseException
+              nil
+            end
+            AsyncBridge.complete(seq, payload) if seq
+          when "notification_click"
+            parsed = begin
+              JSON.parse(payload)
+            rescue JSON::ParseException
+              nil
+            end
+            EventBus.emit("android.notification_click", parsed) if parsed
           else
             Log.warn { "unknown shim event: #{name}" }
           end

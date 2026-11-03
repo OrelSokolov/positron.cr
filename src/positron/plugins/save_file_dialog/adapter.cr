@@ -17,6 +17,13 @@ module Positron::Plugins
     # Returns the path chosen by the user or `nil` if cancelled.
     abstract def save(suggested_name : String, content : String) : String?
 
+    # Non-blocking variant — see FilePickerAdapter#pick(accept, &).
+    # Overridden by callback-driven platforms (Android SAF).
+    def save(suggested_name : String, content : String,
+             &on_done : String? ->) : Nil
+      on_done.call(save(suggested_name, content))
+    end
+
     # True when #save has already persisted `content` to the returned
     # path (the OS picker performed the copy), so the plugin must not
     # write the file again. False by default.

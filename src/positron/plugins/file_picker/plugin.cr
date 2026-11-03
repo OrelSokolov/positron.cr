@@ -68,7 +68,7 @@ module Positron::Plugins
 
       host.run_on_main do
         begin
-          channel.send(@adapter.pick(accept))
+          @adapter.pick(accept) { |path| channel.send(path) }
         rescue ex
           Log.error { "file_picker adapter error: #{ex.message}" }
           channel.send(nil)

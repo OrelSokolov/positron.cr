@@ -14,6 +14,16 @@ module Positron::Plugins
     # Returns the selected file path or `nil` if cancelled.
     abstract def pick(accept : String) : String?
 
+    # Non-blocking variant. Blocking platforms resolve it inline by
+    # calling #pick on the caller's fiber (the plugin invokes adapters
+    # on the GUI thread, where a nested OS run loop is safe).
+    # Callback-driven platforms (Android SAF — the GUI fiber is the
+    # event-loop pump and must not block) override this and deliver the
+    # result later, still on the GUI fiber.
+    def pick(accept : String, &on_done : String? ->) : Nil
+      on_done.call(pick(accept))
+    end
+
     # Common MIME types → file extensions, for the `accept` filter.
     # Shared by the platform adapters (macOS NSOpenPanel, iOS
     # UIDocumentPickerViewController).
