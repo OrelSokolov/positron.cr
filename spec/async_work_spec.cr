@@ -31,6 +31,108 @@ describe "Positron.on_main" do
   end
 end
 
+describe "Positron::AsyncWork::Token" do
+  it "tracks pause and cancel flags" do
+    token = Positron::AsyncWork::Token.new
+    token.paused?.should be_false
+    token.cancelled?.should be_false
+
+    token.pause!
+    token.paused?.should be_true
+    token.cancelled?.should be_false
+
+    token.resume!
+    token.paused?.should be_false
+
+    token.cancel!
+    token.cancelled?.should be_true
+    # Cancel wins over pause — a cancelled job never resumes.
+    token.paused?.should be_false
+  end
+
+  it "sleep raises Cancelled promptly after cancel!" do
+    token = Positron::AsyncWork::Token.new
+    token.cancel!
+    expect_raises(Positron::AsyncWork::Cancelled) { token.sleep(1.second) }
+  end
+
+  it "sleep parks while paused and then completes" do
+    token = Positron::AsyncWork::Token.new
+
+    spawn do
+      sleep 20.milliseconds
+      token.pause!
+      sleep 100.milliseconds
+      token.resume!
+    end
+
+    t0 = Time.instant
+    token.sleep(50.milliseconds)
+    # The pause lands (~20 ms) inside the 50 ms sleep — the second
+    # slice parks for ~100 ms before finishing, so well above 100 ms
+    # total.
+    (Time.instant - t0).total_milliseconds.should be >= 100
+  end
+end
+
+describe "Positron.async_job" do
+  it "returns the block's value through the job" do
+    job = Positron.async_job { |token| "value" }
+    value = job.value
+
+    value["cancelled"].as_bool.should be_false
+    value["results"].as_a.map(&.to_s).should eq(["value"])
+  end
+
+  it "cancel! aborts the block at its checkpoint" do
+    job = Positron.async_job do |token|
+      token.sleep(30.seconds)
+      "never reached"
+    end
+
+    sleep 50.milliseconds
+    job.cancel!
+
+    t0 = Time.instant
+    value = job.value
+    (Time.instant - t0).total_milliseconds.should be < 1000
+
+    value["cancelled"].as_bool.should be_true
+    value["results"].as_a.should eq([JSON.parse("null")])
+  end
+
+  it "captures block errors as _worker_error" do
+    job = Positron.async_job { |token| raise "job boom" }
+    job.value["results"].as_a.first["_worker_error"].to_s.should contain("job boom")
+  end
+end
+
+{% if compare_versions(Crystal::VERSION, "1.21.0") >= 0 %}
+  describe "Positron.async_work_n_threads" do
+    it "runs the block once per worker with distinct indexes" do
+      job = Positron.async_work_n_threads(threads: 4) { |token, index| index }
+
+      value = job.value
+      value["cancelled"].as_bool.should be_false
+      value["results"].as_a.map(&.as_i).sort.should eq([0, 1, 2, 3])
+    end
+
+    it "cancel! aborts every worker" do
+      job = Positron.async_work_n_threads(threads: 3) do |token, index|
+        token.sleep(30.seconds)
+        index
+      end
+
+      sleep 50.milliseconds
+      job.cancel!
+      value = job.value
+
+      value["cancelled"].as_bool.should be_true
+      value["results"].as_a.size.should eq(3)
+    end
+  end
+{% end %}
+
 {% if compare_versions(Crystal::VERSION, "1.21.0") >= 0 %}
   describe "Positron.parallel_work" do
     it "returns results computed on a worker thread" do

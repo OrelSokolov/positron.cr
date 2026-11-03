@@ -64,6 +64,9 @@ module Positron
     #
     #   async_work { load_file(path) }          # concurrent fiber
     #   parallel_work { recompute_all(...) }    # worker thread (CPU)
+    #   async_job { |token| process(...) }      # cancellable/pausable
+    #   async_work_n_threads(threads: 4) { |t, i| burn_slice(i) }
+    #                                           # one job, 4 workers
     #   on_main { refresh_ui }                  # GUI-safe UI update
     #
     # See Positron.async_work for the full contracts (task.value GUI
@@ -75,6 +78,16 @@ module Positron
 
     def parallel_work(*, name : String = "parallel_work", &block : -> _)
       Positron.parallel_work(name: name, &block)
+    end
+
+    def async_job(*, name : String = "async_job", &block : AsyncWork::Token -> _)
+      Positron.async_job(name: name, &block)
+    end
+
+    def async_work_n_threads(*, threads : Int32 = 2,
+                             name : String = "async_work_n_threads",
+                             &block : AsyncWork::Token, Int32 -> _)
+      Positron.async_work_n_threads(threads: threads, name: name, &block)
     end
 
     def on_main(&block : ->) : Nil

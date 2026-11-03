@@ -48,6 +48,12 @@ What is already there ✔ and what is still needed ☐:
 - [x] Async command dispatch: handlers run in fibers off the GUI
       thread, promise resolve marshalled back via `run_on_main`
       (`Host#dispatch`; `dispatch_now` for synchronous use)
+- [x] Cancellable/pausable background jobs: `Positron.async_job` (a
+      Token for `pause!`/`resume!`/`cancel!`, cooperative checkpoints)
+      and `Positron.async_work_n_threads` — one job on N Parallel
+      worker threads sharing a single token (~N× faster CPU-bound
+      jobs); demos: `async_work_with_pause_and_stop`,
+      `async_work_n_threads`
 - [x] Virtual HTTP layer: `Positron.http.*` (fetch semantics) over the
       bridge, `Router` with block routes, `namespace`, Rails-style
       controllers (`@[Positron::Heavy]`, `resources`), middleware,
@@ -322,6 +328,9 @@ for command dispatch, so app code cannot pick the wrong pattern:
 ```crystal
 Positron.async_work { ... }      # конкурентно (fiber): IO, сабпроцессы, ожидание
 Positron.parallel_work { ... }   # параллельно (рабочий поток): CPU-циклы
+Positron.async_job { |token| }   # async_work + пауза/стоп (job.pause!/cancel!)
+Positron.async_work_n_threads(threads: n) { |token, i| }
+                                 # одна задача, n воркеров на Parallel-потоках
 task.value                       # ждать результат (паркует fiber)
 Positron.on_main { ... }         # тронуть UI из любой задачи
 ```
@@ -338,6 +347,29 @@ task = Positron.async_work { parse_large_file(path) }
 # GUI. Never touch the UI inside the block; the return value crosses
 # as JSON (nothing mutable is shared).
 task = Positron.parallel_work { heavy_computation(input) }
+
+# Cancellable/pausable async_work: the block gets a Token whose
+# sleep/checkpoint! are the cooperative stop/pause points. The Job
+# handle flips atomic flags — safe to call from the GUI fiber.
+job = Positron.async_job do |token|
+  items.each do |item|
+    process(item)
+    token.checkpoint!        # raises AsyncWork::Cancelled after cancel!
+  end
+end
+job.pause!                   # token.sleep parks while paused
+job.resume!
+job.cancel!                  # next checkpoint aborts the block
+job.value                    # => {"results": [...], "cancelled": bool}
+
+# One CPU-bound job, N workers on Parallel threads (~N× faster): the
+# block runs once per worker with its index — split the work by it.
+# All workers share one token, so pause!/cancel! cover the whole
+# fleet. Same no-UI-inside contract as parallel_work.
+job = Positron.async_work_n_threads(threads: 4) do |token, index|
+  burn_my_slice(index)       # report progress via a shared atomic
+  token.checkpoint!
+end
 
 # Await — parks the calling fiber. Raises on the GUI fiber instead of
 # freezing the UI.
@@ -529,6 +561,14 @@ examples/
   eta_progress/                          # 10 workers, tqdm-style
     eta_progress.cr                      # bars with %, elapsed, rate,
     worker.cr                            # ETA (async_work per worker)
+    frontend/
+  async_work_with_pause_and_stop/        # async_job: pause/resume/
+    async_work_with_pause_and_stop.cr    # stop a background job
+    worker.cr                            # through its Token
+    frontend/
+  async_work_n_threads/                  # one CPU-bound job on N
+    async_work_n_threads.cr              # Parallel threads (~N×
+    worker.cr                            # faster), shared token
     frontend/
 assets/
   crystal-icon.svg                       # Blue crystal icon

@@ -30,4 +30,21 @@ module Positron
   def self.run_parallel(&block : -> T) : T forall T
     yield
   end
+
+  # async_work_n_threads fallback (see async_work_parallel.cr): the
+  # workers run as plain fibers — concurrent, not parallel, so a
+  # CPU-bound job is NOT n times faster here (pause/cancel semantics
+  # are identical). Real parallelism needs Crystal >= 1.21.
+  def self.async_work_n_threads(*, threads : Int32 = 2,
+                                name : String = "async_work_n_threads",
+                                &block : AsyncWork::Token, Int32 -> _)
+    count = {threads, 1}.max
+    job = AsyncWork::Job.new(name, count)
+    count.times do |i|
+      spawn(name: "#{name}-w#{i}") do
+        job.run_worker { |token| block.call(token, i) }
+      end
+    end
+    job
+  end
 end

@@ -114,7 +114,7 @@ build:
         - crystal spec          # specs must pass — same gate as CI
         - rake build:cli        # bin/positron
         - rake build:examples   # examples/<name>/<name>, logs to logs/
-        - cp examples/async_progress/async_progress examples/eta_progress/eta_progress examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
+        - cp examples/async_progress/async_progress examples/async_work_with_pause_and_stop/async_work_with_pause_and_stop examples/async_work_n_threads/async_work_n_threads examples/eta_progress/eta_progress examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
       artifacts:
         from: bin
         include: ["*"]
@@ -153,7 +153,7 @@ build:
         - rake build:cli        # bin/positron
         - rake build:examples   # examples/<name>/<name>, logs to logs/
         - rm -f examples/*/*.dwarf bin/*.dwarf
-        - cp examples/async_progress/async_progress examples/eta_progress/eta_progress examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
+        - cp examples/async_progress/async_progress examples/async_work_with_pause_and_stop/async_work_with_pause_and_stop examples/async_work_n_threads/async_work_n_threads examples/eta_progress/eta_progress examples/hello/hello examples/clipboard/clipboard examples/display_info/display_info examples/file_picker/file_picker examples/keyboard_demo/keyboard_demo examples/scheduler_demo/scheduler_demo examples/save_file_dialog/save_file_dialog examples/system_notifications/system_notifications examples/theme_demo/theme_demo bin/
       artifacts:
         from: bin
         include: ["*"]
@@ -177,6 +177,8 @@ package:
   payload:
     positron: { linux: positron, windows: positron.exe }
     hello: { linux: hello, windows: hello.exe }
+    async_work_n_threads: { linux: async_work_n_threads, windows: async_work_n_threads.exe }
+    async_work_with_pause_and_stop: { linux: async_work_with_pause_and_stop, windows: async_work_with_pause_and_stop.exe }
     clipboard: { linux: clipboard, windows: clipboard.exe }
     display_info: { linux: display_info, windows: display_info.exe }
     file_picker: { linux: file_picker, windows: file_picker.exe }
@@ -191,9 +193,10 @@ package:
     pcre2-8.dll: { windows: pcre2-8.dll }
     zlib1.dll: { windows: zlib1.dll }
     webview.dll: { windows: webview.dll }
-  executables: [hello, positron, clipboard, display_info, file_picker,
-                keyboard_demo, save_file_dialog, system_notifications,
-                theme_demo]
+  executables: [hello, positron, async_work_n_threads,
+                async_work_with_pause_and_stop, clipboard, display_info,
+                file_picker, keyboard_demo, save_file_dialog,
+                system_notifications, theme_demo]
   links:
     bin/positron: ../lib/positron/positron
   desktop:

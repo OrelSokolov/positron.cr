@@ -44,6 +44,26 @@ module Positron
       System.cpu_count.try(&.clamp(2, 8)) || 4)
   end
 
+  # One job, `threads` workers: the block runs once per worker on a
+  # Parallel worker thread (index 0...threads — split the work by it),
+  # all sharing a single pause/cancel token. CPU-bound jobs finish
+  # ~n times faster. Same contract as parallel_work: never touch the
+  # UI inside the block; each worker's return value crosses as JSON
+  # (null if cancelled), `job.value` aggregates them as
+  # `{"results": [...], "cancelled": bool}`.
+  def self.async_work_n_threads(*, threads : Int32 = 2,
+                                name : String = "async_work_n_threads",
+                                &block : AsyncWork::Token, Int32 -> _)
+    count = {threads, 1}.max
+    job = AsyncWork::Job.new(name, count)
+    count.times do |i|
+      parallel_context.spawn(name: "#{name}-w#{i}") do
+        job.run_worker { |token| block.call(token, i) }
+      end
+    end
+    job
+  end
+
   # Framework-internal typed variant: run the block on a worker thread
   # and return its value as-is (no JSON round-trip). Used by
   # CommandRegistry for `execution: :parallel` handlers — CommandResult

@@ -111,6 +111,8 @@ are flag-gated.
 ```
 src/positron/
   event_bus.cr          # internal pub/sub (fibers per handler)
+  async_work.cr         # background-work DSL + AsyncWork::Token/Job
+                        # (async_job, cooperative pause/cancel)
   command_registry.cr   # JSON command dispatch + @[Command] macro
   state_manager.cr      # observable host state
   plugin.cr             # base plugin + PluginManager

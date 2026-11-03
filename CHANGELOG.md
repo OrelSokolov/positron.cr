@@ -43,6 +43,25 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `Plugin#on_ready` widened to accept any `Host` (was `DesktopHost`) —
   required for the Android host to drive the same plugin lifecycle.
 
+- Cancellable/pausable background jobs in the async_work DSL:
+  - `Positron.async_job { |token| ... }` — async_work plus a shared
+    `AsyncWork::Token`: `token.sleep` / `token.checkpoint!` are the
+    cooperative pause/stop points; the returned `AsyncWork::Job`
+    exposes `pause!` / `resume!` / `cancel!` / `done?` (atomic flags,
+    safe to flip from the GUI fiber) and `value`
+    (`{"results": [...], "cancelled": bool}`);
+  - `Positron.async_work_n_threads(threads: n) { |token, index| ... }`
+    — one job on N `Fiber::ExecutionContext::Parallel` worker threads
+    (~N× faster CPU-bound work; concurrent-fiber fallback on
+    toolchains < 1.21). All workers share one Token, so pause/cancel
+    control the whole fleet; same no-UI-inside contract as
+    parallel_work;
+  - instance-level `async_job` / `async_work_n_threads` on
+    `Positron::Application`;
+  - new examples: `async_work_with_pause_and_stop` (pause/resume/stop
+    a progress job) and `async_work_n_threads` (300M-unit hash burn
+    split across 1–8 workers, with throughput/speedup table).
+
 ### Changed
 
 - `secure_storage` is no longer compiled into Android builds (no

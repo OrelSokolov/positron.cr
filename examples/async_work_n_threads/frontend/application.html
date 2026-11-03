@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Positron — N workers demo</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <h1>Одна задача, N воркеров</h1>
+
+  <div class="row">
+    <label for="workers">Воркеров:</label>
+    <select id="workers">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="4" selected>4</option>
+      <option value="8">8</option>
+    </select>
+    <button id="start">Запустить (300M юнитов)</button>
+    <button id="pause" class="secondary" disabled>Пауза</button>
+    <button id="stop" class="danger" disabled>Стоп</button>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div id="bar"></div></div>
+    <div id="progress-label">воркер не запущен</div>
+  </div>
+
+  <table id="runs" class="runs">
+    <thead>
+      <tr><th>#</th><th>воркеров</th><th>время, с</th><th>Mюнит/с</th><th>ускорение</th><th>итог</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <p class="hint">
+    <code>Positron.async_work_n_threads(threads: n)</code> запускает
+    блок по разу на каждый Parallel-поток: диапазон 300M юнитов
+    делится статически по индексу воркера, поэтому N воркеров считают
+    её ~в N раз быстрее. Все воркеры делят один токен — пауза и стоп
+    действуют на весь отряд сразу. Контрольная сумма (XOR хешей
+    юнитов) не зависит от числа воркеров — сверьте её между запусками.
+  </p>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>

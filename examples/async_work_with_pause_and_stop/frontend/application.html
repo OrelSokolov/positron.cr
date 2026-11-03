@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Positron — pause &amp; stop demo</title>
+  <style>
+{{CSS}}
+  </style>
+</head>
+<body>
+  <h1>Пауза и остановка фонового воркера</h1>
+
+  <div class="row">
+    <button id="start">Запустить воркер (30 с)</button>
+    <button id="pause" class="secondary" disabled>Пауза</button>
+    <button id="stop" class="danger" disabled>Стоп</button>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div id="bar"></div></div>
+    <div id="progress-label">воркер не запущен</div>
+  </div>
+
+  <div id="timeline" class="timeline"></div>
+
+  <div id="result" class="result"></div>
+
+  <p class="hint">
+    Воркер — <code>Positron.async_job</code>: тот же
+    <code>async_work</code>, но блок получает токен. «Пауза» ставит
+    флаг — <code>token.sleep</code> внутри воркера паркуется, пока он
+    поднят; «Стоп» отменяет задачу — ближайший чекпоинт бросает
+    <code>AsyncWork::Cancelled</code>, и приходит
+    <code>demo.done</code> с <code>cancelled: true</code>. Волокна в
+    Crystal кооперативные, поэтому «убийство» — это сигнал, который
+    воркер обязуется проверять.
+  </p>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script>
+{{JS}}
+  </script>
+</body>
+</html>
