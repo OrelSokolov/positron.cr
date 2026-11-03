@@ -4,11 +4,14 @@
 # safe for binary files, unlike a raw String literal.
 require "base64"
 
-dir = ARGV[0].chomp("/")
+# Normalize to forward slashes: File.join produces backslashes on
+# Windows, and Dir.glob patterns with backslashes match nothing there
+# (regular File.* paths accept both, only the glob is picky).
+dir = ARGV[0].chomp("/").gsub('\\', "/")
 
 files = {} of String => String
 if Dir.exists?(dir)
-  Dir.glob(File.join(dir, "**", "*")).sort.each do |path|
+  Dir.glob("#{dir}/**/*").sort.each do |path|
     next unless File.file?(path)
     rel = "/#{path[(dir.size + 1)..]}"
     files[rel] = Base64.strict_encode(File.read(path))
