@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Positron Camera Demo</title>
+  <link rel="stylesheet" href="application.css">
+</head>
+<body>
+  <main class="app">
+    <header class="toolbar">
+      <select id="device" class="select" title="Capture device"></select>
+      <button class="button primary" id="toggleBtn">Start</button>
+      <button class="button" id="torchBtn" hidden>Torch</button>
+      <span class="status" id="status">Pick a camera and press Start.</span>
+    </header>
+
+    <section class="stage">
+      <video id="video" autoplay playsinline muted></video>
+      <div class="placeholder" id="placeholder">
+        <div class="logo">{{ICON_HTML}}</div>
+        <h1>No preview</h1>
+        <p id="placeholderHint">Press Start to open the camera.</p>
+      </div>
+    </section>
+
+    <footer class="events">
+      <div class="events-title">Host events</div>
+      <div class="events-log" id="eventsLog"></div>
+    </footer>
+  </main>
+
+  <script>
+{{RUNTIME_JS}}
+  </script>
+  <script>
+{{HYDRATE_JS}};
+  </script>
+  <script src="application.js"></script>
+</body>
+</html>

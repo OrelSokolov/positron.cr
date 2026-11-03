@@ -62,7 +62,7 @@ an MSI via WiX on Windows (`wix` from `dotnet tool install -g wix`),
 deb/rpm on Linux. Keep the `version:` in `crosspack.yml` in sync
 with `shard.yml`.
 
-All 8 examples must build cleanly and all specs must pass before a change
+All examples must build cleanly and all specs must pass before a change
 is considered done.
 
 CI (`.github/workflows/ci.yml`) runs `crystal spec` and builds all examples
@@ -219,7 +219,12 @@ examples/               # demo apps (each has frontend/ HTML/CSS/JS)
   at the toplevel under `flag?(:android)` instead of calling
   `Application#run` (the Activity shim owns the lifecycle).
 - Examples use `embed_application_files(__DIR__, icon_path)` to bake
-  HTML/CSS/JS and the icon into the binary at compile time.
+  HTML/CSS/JS and the icon into the binary at compile time. Media-heavy
+  frontends need a secure context — serve them over a custom URI scheme
+  instead (`embed_directory` + `webview.register_uri_scheme` +
+  `load_url("app://…/application.html")`, see `examples/camera`);
+  `load_html` pages have an opaque origin and expose no
+  `navigator.mediaDevices`.
 - `Application#embed_directory(dir)` bakes a whole tree (base64, binary-safe)
   — e.g. a built web app; `Application#embed_file(path)` bakes one file.
   Both take plain string literals (relative paths resolve from the

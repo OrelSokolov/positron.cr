@@ -507,6 +507,9 @@ examples/
   hello/
     hello.cr                             # Polished demo app
     frontend/                            # HTML/CSS/JS assets
+  camera/                                # getUserMedia live preview over
+    camera.cr                            # the app:// scheme (embedded
+    frontend/                            # tree; permission grants)
   scheduler_demo/                        # CPU burn vs cooperative
     scheduler_demo.cr                    # scheduler: freeze / yield /
     burn.cr                              # subprocess strategies
