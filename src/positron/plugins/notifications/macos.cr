@@ -31,7 +31,7 @@ module Positron::Plugins
   class MacOSNotificationsAdapter < NotificationsAdapter
     LOG = Log.for("positron.plugins.notifications")
 
-    private OBJC = Positron::Adapters::MacOS::ObjC
+    private OBJC     = Positron::Adapters::MacOS::ObjC
     private LIB_OBJC = Positron::Adapters::MacOS::LibObjC
 
     # UNAuthorizationOptionBadge | .Sound | .Alert
@@ -40,7 +40,7 @@ module Positron::Plugins
     # UNNotificationPresentationOptionSound | .List | .Banner (macOS 11+)
     FOREGROUND_OPTIONS = 2 | 8 | 16
 
-    DID_RECEIVE_SELECTOR = "userNotificationCenter:didReceiveNotificationResponse:withCompletionHandler:"
+    DID_RECEIVE_SELECTOR  = "userNotificationCenter:didReceiveNotificationResponse:withCompletionHandler:"
     WILL_PRESENT_SELECTOR = "userNotificationCenter:willPresentNotification:withCompletionHandler:"
 
     # enum flags from Block_private.h
@@ -96,7 +96,7 @@ module Positron::Plugins
     end
 
     def send(id : String, title : String, body : String,
-                     actions : Array({String, String}) = [] of {String, String}) : String
+             actions : Array({String, String}) = [] of {String, String}) : String
       center = notification_center
       if center.nil? || center.null?
         script_send(title, body)
@@ -288,7 +288,7 @@ module Positron::Plugins
 
     private def added_block : Void*
       # addNotificationRequest's errorHandler takes an NSError* argument;
-    # the extra register argument is ignored by the no-arg invoke.
+      # the extra register argument is ignored by the no-arg invoke.
       @added_block_obj ||= make_block(@@added_imp.not_nil!.pointer)
     end
 
@@ -349,7 +349,7 @@ module Positron::Plugins
     # the awaited flag. `break` inside the block stops early. The
     # generous default: the OS shows the permission prompt as a banner
     # the user may take a while to click.
-    private def spin(timeout_seconds : Int32 = 60) : Nil
+    private def spin(timeout_seconds : Int32 = 60, &) : Nil
       ts = LibC::Timespec.new(tv_sec: 0, tv_nsec: 20_000_000)
       deadline = Time.instant + timeout_seconds.seconds
       while Time.instant < deadline

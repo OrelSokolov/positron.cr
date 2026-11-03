@@ -19,7 +19,7 @@ module Positron::Plugins
     # DEVMODEW offsets we care about (see docs; accessed through a raw
     # byte buffer to avoid spelling out the whole ~220-byte struct).
     DEVMODE_SIZE           = 220
-    DEVMODE_DM_SIZE_OFFSET = 68
+    DEVMODE_DM_SIZE_OFFSET =  68
     DEVMODE_FREQUENCY_OFF  = 184 # dmDisplayFrequency (DWORD)
 
     def info : DisplayInfo

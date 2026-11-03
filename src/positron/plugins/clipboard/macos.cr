@@ -9,10 +9,10 @@ module Positron::Plugins
     OBJC = Positron::Adapters::MacOS::ObjC
 
     # UTI identifiers for the pasteboard types we read/write.
-    TYPE_STRING  = "public.utf8-plain-text"
+    TYPE_STRING   = "public.utf8-plain-text"
     TYPE_FILE_URL = "public.file-url"
-    TYPE_PNG     = "public.png"
-    TYPE_TIFF    = "public.tiff"
+    TYPE_PNG      = "public.png"
+    TYPE_TIFF     = "public.tiff"
 
     def read_text : String?
       OBJC.with_autorelease_pool do

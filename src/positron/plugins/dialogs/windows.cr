@@ -18,9 +18,9 @@ module Positron::Plugins
     Log = ::Log.for("positron.plugins.dialogs")
 
     # Control ids for the prompt window.
-    IDC_PROMPT_EDIT = 1001
-    IDC_PROMPT_OK   = 1 # IDOK
-    IDC_PROMPT_CANCEL = 2
+    IDC_PROMPT_EDIT   = 1001
+    IDC_PROMPT_OK     =    1 # IDOK
+    IDC_PROMPT_CANCEL =    2
 
     @@prompt_state : PromptState?
     @@prompt_proc = ->(hwnd : Void*, msg : UInt32, wparam : UInt64, lparam : Int64) : Int64 do

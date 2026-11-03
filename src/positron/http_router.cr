@@ -96,7 +96,7 @@ module Positron
       path.split('/').reject(&.empty?)
     end
 
-    def draw : self
+    def draw(&) : self
       yield self
       self
     end
@@ -143,10 +143,10 @@ module Positron
     # update, destroy (new/edit are the frontend's job).
     def resources(path : String, controller : Controller.class, heavy : Bool = false) : Nil
       base = path.chomp("/")
-      get  "#{base}", controller, "index", heavy: heavy
+      get "#{base}", controller, "index", heavy: heavy
       post "#{base}", controller, "create", heavy: heavy
-      get  "#{base}/:id", controller, "show", heavy: heavy
-      put  "#{base}/:id", controller, "update", heavy: heavy
+      get "#{base}/:id", controller, "show", heavy: heavy
+      put "#{base}/:id", controller, "update", heavy: heavy
       patch "#{base}/:id", controller, "update", heavy: heavy
       delete "#{base}/:id", controller, "destroy", heavy: heavy
     end
@@ -183,7 +183,6 @@ module Positron
       end
       params
     end
-
   end
 
   class Request
@@ -308,7 +307,7 @@ module Positron
             \{% end %}
           \{% end %}
           else
-            raise "unknown action #{name} for \#{@type}"
+            raise "unknown action #{name} for \{{@type}}"
           end
         end
 

@@ -8,7 +8,7 @@ module Positron::Plugins
   # the C-ABI/Swift shim on iOS.
   class IOSNotificationsAdapter < NotificationsAdapter
     def send(id : String, title : String, body : String,
-                     actions : Array({String, String}) = [] of {String, String}) : String
+             actions : Array({String, String}) = [] of {String, String}) : String
       Log.for("positron.plugins.notifications").warn { "iOS notifications not yet implemented" }
       id
     end

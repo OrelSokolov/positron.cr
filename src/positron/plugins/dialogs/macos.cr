@@ -10,10 +10,10 @@ module Positron::Plugins
   # them there via `Host#run_on_main` (see plugins/dialogs/plugin.cr).
   class MacOSDialogsAdapter < DialogsAdapter
     OBJC = Positron::Adapters::MacOS::ObjC
-    App = Positron::Adapters::MacOS::App
+    App  = Positron::Adapters::MacOS::App
 
     # NSAlertStyle: 0 informational, 1 warning, 2 critical.
-    NS_ALERT_STYLE_WARNING = 1
+    NS_ALERT_STYLE_WARNING  = 1
     NS_ALERT_STYLE_CRITICAL = 2
 
     # NSModalResponseOK — the return of runModal for the first

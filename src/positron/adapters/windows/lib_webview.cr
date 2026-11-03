@@ -21,10 +21,10 @@ module Positron
         alias WebviewT = Void*
 
         # Window size hints (webview_hint_t).
-        HINT_NONE   = 0
-        HINT_MIN    = 1
-        HINT_MAX    = 2
-        HINT_FIXED  = 3
+        HINT_NONE  = 0
+        HINT_MIN   = 1
+        HINT_MAX   = 2
+        HINT_FIXED = 3
 
         # webview_get_native_handle kinds.
         HANDLE_KIND_UI_WINDOW          = 0
@@ -49,11 +49,11 @@ module Positron
         @@return_result : Proc(Void*, UInt8*, Int32, UInt8*, Int32)?
         @@version : Proc(Void*)?
 
-        DLL_NAME     = "webview.dll"
-        VENDOR_RELS  = {"third_party/webview/webview.dll",
-                        "../third_party/webview/webview.dll",
-                        "../../third_party/webview/webview.dll",
-                        "../../../third_party/webview/webview.dll"}
+        DLL_NAME    = "webview.dll"
+        VENDOR_RELS = {"third_party/webview/webview.dll",
+                       "../third_party/webview/webview.dll",
+                       "../../third_party/webview/webview.dll",
+                       "../../../third_party/webview/webview.dll"}
 
         def self.loaded? : Bool
           !@@handle.nil?

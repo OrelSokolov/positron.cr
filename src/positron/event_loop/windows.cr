@@ -12,7 +12,7 @@ module Positron
     # callback calls Fiber.yield — the same cooperative tick the Linux loop
     # implements with a GLib idle source.
     class Windows < EventLoopPort
-      TICK_MS  = 15
+      TICK_MS  =    15
       TIMER_ID = 1_u64
       @@instance : Windows?
 

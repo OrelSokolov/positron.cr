@@ -12,6 +12,7 @@ module Positron::Plugins
   # open.
   class WindowsFilePickerAdapter < FilePickerAdapter
     include ::Positron::Adapters::Windows # Win32 FFI bindings
+
     def pick(accept : String) : String?
       buffer = Slice(UInt16).new(32768)
 

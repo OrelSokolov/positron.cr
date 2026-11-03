@@ -173,7 +173,7 @@ module Positron
             cmd = Win32::LibUser32.TrackPopupMenu(
               menu,
               Win32::TPM_RIGHTBUTTON | Win32::TPM_RETURNCMD | Win32::TPM_NONOTIFY |
-                Win32::TPM_RIGHTALIGN | Win32::TPM_BOTTOMALIGN,
+              Win32::TPM_RIGHTALIGN | Win32::TPM_BOTTOMALIGN,
               cursor.x, cursor.y, 0, @window, Pointer(Void).null)
             Win32::LibUser32.PostMessageW(@window, Win32::WM_NULL, 0_u64, 0_i64)
 

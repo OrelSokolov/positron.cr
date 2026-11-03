@@ -6,31 +6,31 @@ module Positron
       # itself is loaded through `lib_webview.cr`.
       module Win32
         # Window messages used by the adapters.
-        WM_NULL               = 0x0000
-        WM_DESTROY            = 0x0002
-        WM_SIZE               = 0x0005
-        WM_MOVE               = 0x0003
-        WM_CLOSE              = 0x0010
-        WM_SETICON            = 0x0080
-        WM_COMMAND            = 0x0111
-        WM_TIMER              = 0x0113
-        WM_WINDOWPOSCHANGED   = 0x0047
-        WM_CONTEXTMENU        = 0x007B
-        WM_APP                = 0x8000
+        WM_NULL             = 0x0000
+        WM_DESTROY          = 0x0002
+        WM_SIZE             = 0x0005
+        WM_MOVE             = 0x0003
+        WM_CLOSE            = 0x0010
+        WM_SETICON          = 0x0080
+        WM_COMMAND          = 0x0111
+        WM_TIMER            = 0x0113
+        WM_WINDOWPOSCHANGED = 0x0047
+        WM_CONTEXTMENU      = 0x007B
+        WM_APP              = 0x8000
 
         # Mouse messages delivered through the tray callback message.
-        WM_LBUTTONUP  = 0x0202
-        WM_RBUTTONUP  = 0x0205
+        WM_LBUTTONUP = 0x0202
+        WM_RBUTTONUP = 0x0205
 
         # ShowWindow commands.
-        SW_HIDE      = 0
-        SW_MAXIMIZE  = 3
-        SW_SHOW      = 5
-        SW_RESTORE   = 9
+        SW_HIDE     = 0
+        SW_MAXIMIZE = 3
+        SW_SHOW     = 5
+        SW_RESTORE  = 9
 
         # GetWindowLongPtr indexes and window styles.
-        GWL_STYLE     = -16
-        GWLP_WNDPROC  = -4
+        GWL_STYLE     =            -16
+        GWLP_WNDPROC  =             -4
         WS_POPUP      = 0x80000000_u32
         WS_CAPTION    = 0x00C00000_u32
         WS_THICKFRAME = 0x00040000_u32
@@ -47,27 +47,27 @@ module Positron
         HWND_MESSAGE     = Pointer(Void).new(0xFFFF_FFFF_FFFF_FFFD_u64)
 
         # Icons.
-        ICON_SMALL = 0_i64
-        ICON_BIG   = 1_i64
-        IMAGE_ICON = 1_u32
+        ICON_SMALL      =      0_i64
+        ICON_BIG        =      1_i64
+        IMAGE_ICON      =      1_u32
         LR_LOADFROMFILE = 0x0010_u32
         LR_DEFAULTSIZE  = 0x0040_u32
         IDI_APPLICATION = Pointer(UInt16).new(32512_u64)
         IDC_ARROW       = Pointer(UInt16).new(32512_u64)
 
         # NotifyIcon.
-        NIM_ADD     = 0_u32
-        NIM_MODIFY  = 1_u32
-        NIM_DELETE  = 2_u32
-        NIM_GETVERSION = 3_u32
-        NIM_SETVERSION = 4_u32
-        NIF_MESSAGE = 0x01_u32
-        NIF_ICON    = 0x02_u32
-        NIF_TIP     = 0x04_u32
-        NIF_INFO    = 0x10_u32
-        NIF_STATE   = 0x08_u32
-        NIF_SHOWTIP = 0x80_u32
-        NIS_HIDDEN  = 0x01_u32
+        NIM_ADD        =    0_u32
+        NIM_MODIFY     =    1_u32
+        NIM_DELETE     =    2_u32
+        NIM_GETVERSION =    3_u32
+        NIM_SETVERSION =    4_u32
+        NIF_MESSAGE    = 0x01_u32
+        NIF_ICON       = 0x02_u32
+        NIF_TIP        = 0x04_u32
+        NIF_INFO       = 0x10_u32
+        NIF_STATE      = 0x08_u32
+        NIF_SHOWTIP    = 0x80_u32
+        NIS_HIDDEN     = 0x01_u32
 
         # Popup menus.
         TPM_RIGHTBUTTON = 0x0002_u32
@@ -87,51 +87,51 @@ module Positron
         MONITOR_DEFAULTTONEAREST = 2_u32
 
         # Clipboard formats.
-        CF_DIB          = 8_u32
-        CF_UNICODETEXT  = 13_u32
-        CF_HDROP        = 15_u32
-        GMEM_MOVEABLE   = 0x02_u32
+        CF_DIB         =    8_u32
+        CF_UNICODETEXT =   13_u32
+        CF_HDROP       =   15_u32
+        GMEM_MOVEABLE  = 0x02_u32
 
         # MessageBox.
-        MB_OK                 = 0x0000_u32
-        MB_OKCANCEL           = 0x0001_u32
-        MB_ICONERROR          = 0x0010_u32
-        MB_ICONWARNING        = 0x0030_u32
-        MB_ICONINFORMATION    = 0x0040_u32
-        IDOK                  = 1
-        IDCANCEL              = 2
+        MB_OK              = 0x0000_u32
+        MB_OKCANCEL        = 0x0001_u32
+        MB_ICONERROR       = 0x0010_u32
+        MB_ICONWARNING     = 0x0030_u32
+        MB_ICONINFORMATION = 0x0040_u32
+        IDOK               =          1
+        IDCANCEL           =          2
 
         # Common dialog flags (comdlg32).
-        OFN_PATHMUSTEXIST     = 0x0008_u32
-        OFN_FILEMUSTEXIST     = 0x1000_u32
-        OFN_OVERWRITEPROMPT   = 0x0002_u32
-        OFN_HIDEREADONLY      = 0x0004_u32
-        OFN_NOCHANGEDIR       = 0x0008_u32
+        OFN_PATHMUSTEXIST   = 0x0008_u32
+        OFN_FILEMUSTEXIST   = 0x1000_u32
+        OFN_OVERWRITEPROMPT = 0x0002_u32
+        OFN_HIDEREADONLY    = 0x0004_u32
+        OFN_NOCHANGEDIR     = 0x0008_u32
 
         # Window messages used by dialogs/prompt.
-        WM_SETTEXT     = 0x000C
-        WM_GETTEXT     = 0x000D
+        WM_SETTEXT       = 0x000C
+        WM_GETTEXT       = 0x000D
         WM_GETTEXTLENGTH = 0x000E
-        WM_SETFONT     = 0x0030
-        WM_QUIT        = 0x0012
-        WM_USER        = 0x0400
+        WM_SETFONT       = 0x0030
+        WM_QUIT          = 0x0012
+        WM_USER          = 0x0400
 
         # Tray balloon notifications (lParam of the callback message).
-        NIN_BALLOONSHOW       = WM_USER + 2
-        NIN_BALLOONHIDE       = WM_USER + 3
-        NIN_BALLOONTIMEOUT    = WM_USER + 4
-        NIN_BALLOONUSERCLICK  = WM_USER + 5
-        NIIF_INFO             = 0x01_u32
-        NIIF_RESPECT_QUIET    = 0x80_u32
+        NIN_BALLOONSHOW      = WM_USER + 2
+        NIN_BALLOONHIDE      = WM_USER + 3
+        NIN_BALLOONTIMEOUT   = WM_USER + 4
+        NIN_BALLOONUSERCLICK = WM_USER + 5
+        NIIF_INFO            = 0x01_u32
+        NIIF_RESPECT_QUIET   = 0x80_u32
 
         # Child control styles.
-        WS_CHILD        = 0x40000000_u32
-        WS_TABSTOP      = 0x00010000_u32
-        WS_BORDER       = 0x00800000_u32
+        WS_CHILD            = 0x40000000_u32
+        WS_TABSTOP          = 0x00010000_u32
+        WS_BORDER           = 0x00800000_u32
         WS_EX_CONTROLPARENT = 0x00010000_u32
-        ES_AUTOHSCROLL  = 0x0080_u32
-        BS_DEFPUSHBUTTON = 0x0001_u32
-        DEFAULT_GUI_FONT = 17
+        ES_AUTOHSCROLL      =     0x0080_u32
+        BS_DEFPUSHBUTTON    =     0x0001_u32
+        DEFAULT_GUI_FONT    =             17
 
         # System metrics (virtual desktop).
         SM_XVIRTUALSCREEN  = 76
@@ -140,8 +140,8 @@ module Positron
         SM_CYVIRTUALSCREEN = 79
 
         # GetDeviceCaps indexes.
-        HORZSIZE   = 4
-        VERTSIZE   = 6
+        HORZSIZE   =  4
+        VERTSIZE   =  6
         LOGPIXELSX = 88
 
         ENUM_CURRENT_SETTINGS = 0xFFFFFFFF_u32

@@ -14,16 +14,16 @@ module Positron::Plugins
 
     # Common MIME types → file extensions, for the `accept` filter.
     MIME_EXTENSIONS = {
-      "text/plain"        => ["txt"],
-      "text/*"            => ["txt", "md"],
-      "text/markdown"     => ["md"],
-      "image/*"           => ["png", "jpg", "jpeg", "gif", "webp", "tiff"],
-      "image/png"         => ["png"],
-      "image/jpeg"        => ["jpg", "jpeg"],
-      "image/gif"         => ["gif"],
-      "image/webp"        => ["webp"],
-      "image/tiff"        => ["tiff"],
-      "application/json"  => ["json"],
+      "text/plain"       => ["txt"],
+      "text/*"           => ["txt", "md"],
+      "text/markdown"    => ["md"],
+      "image/*"          => ["png", "jpg", "jpeg", "gif", "webp", "tiff"],
+      "image/png"        => ["png"],
+      "image/jpeg"       => ["jpg", "jpeg"],
+      "image/gif"        => ["gif"],
+      "image/webp"       => ["webp"],
+      "image/tiff"       => ["tiff"],
+      "application/json" => ["json"],
     }
 
     def pick(accept : String) : String?

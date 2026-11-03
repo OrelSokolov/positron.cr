@@ -136,7 +136,7 @@ describe Positron::Host do
 
     response = host.dispatch(%({"type":"command","id":"abc","name":"greet","args":{"name":"Async"}}))
 
-    response.should eq("") # bridge callbacks skip evaluating empty responses
+    response.should eq("")       # bridge callbacks skip evaluating empty responses
     host.main_calls.should eq(0) # nothing ran yet — the fiber is queued
     app.greeted.should be_empty
     sleep 50.milliseconds # let the spawned fiber run

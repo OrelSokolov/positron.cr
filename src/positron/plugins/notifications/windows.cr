@@ -45,7 +45,7 @@ module Positron::Plugins
     end
 
     def send(id : String, title : String, body : String,
-                     actions : Array({String, String}) = [] of {String, String}) : String
+             actions : Array({String, String}) = [] of {String, String}) : String
       ensure_icon
 
       data = base_data

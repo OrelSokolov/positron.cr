@@ -10,8 +10,8 @@ module Positron::Plugins
   #   - accent:     HKCU\Software\Microsoft\Windows\DWM\AccentColor (ABGR)
   #   - high contrast: HKCU\Control Panel\Accessibility\HighContrast\Flags
   class WindowsThemeAdapter < ThemeAdapter
-    PERSONALIZE_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
-    DWM_KEY         = "HKCU\\Software\\Microsoft\\Windows\\DWM"
+    PERSONALIZE_KEY   = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+    DWM_KEY           = "HKCU\\Software\\Microsoft\\Windows\\DWM"
     HIGH_CONTRAST_KEY = "HKCU\\Control Panel\\Accessibility\\HighContrast"
 
     def info : ThemeInfo
