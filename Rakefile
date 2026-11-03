@@ -92,6 +92,11 @@ namespace :build do
     sh "android/build_android.sh"
   end
 
+  desc "Build the hello example for the iOS simulator (arm64, install + launch)"
+  task :ios do
+    sh "ios/build_ios.sh"
+  end
+
   desc "macOS only: bundle the camera example into a .app (camera needs a bundled NSCameraUsageDescription)"
   task :camera_app do
     build_example("camera") # bundles + warns automatically on macOS

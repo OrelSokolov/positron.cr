@@ -134,7 +134,12 @@ What is already there ✔ and what is still needed ☐:
 - [ ] Share sheet, badges, taskbar progress, global hotkeys, system sounds
 - [ ] Media & hardware plugins (camera, microphone, audio/video player,
       geolocation, sensors, biometrics) — Tier 2+ in `plugins.txt`;
-      frontend `getUserMedia` already works (see media permissions above)
+      frontend `getUserMedia` already works (see media permissions
+      above). Native camera capture exists for iOS (the camera plugin's
+      AVFoundation bridge — WKWebView's `getUserMedia` runs in XPC
+      processes, so the host captures in-process and the frontend pulls
+      frames over the app's custom URI scheme; `examples/camera`
+      branches on `camera.supported()`)
 
 ### Mobile
 
@@ -152,7 +157,14 @@ What is already there ✔ and what is still needed ☐:
       (SharedPreferences), lifecycle (Activity callbacks) — the rest
       (file_picker, save_file_dialog, notifications, secure_storage)
       stay stubs/absent for now
-- [ ] iOS host (architecture §8 ready, not implemented)
+- [x] iOS simulator host (`rake build:ios`, arm64): WKWebView inside a
+      UIWindow through a pure-Crystal ObjC runtime layer (port of the
+      macOS adapters), `UIApplicationMain` entered from the event loop,
+      JS bridge + custom URI schemes via WKScriptMessageHandler /
+      WKURLSchemeHandler IMPs, UIKit lifecycle forwarded to
+      `Application#on_lifecycle`; builds on the patched-Crystal iOS
+      toolchain from egui.cr (see `ios/build_ios.sh`); plugin adapters
+      stay stubs (same set as Android minus the implemented ones)
 
 ## Android
 
@@ -199,7 +211,7 @@ there — WKWebView consumes file drops with no public hook). Legend: ✅ works 
 | Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) | 🔶 (debuggable builds) |
 | Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ | ❌ |
 | Media permissions (`getUserMedia`) | ✅ | ✅ (packaged `.app` only — bare binaries get no system prompt) | ✅ | 🔶 (granted; OS permission prompts pending) |
-| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ | 🔶 (clipboard/theme/display/preferences/lifecycle real; rest stubs) |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ | 🔶 (clipboard/theme/display/preferences/lifecycle/camera real; rest stubs) |
 | Packaging | ✅ .desktop / AppImage / deb | ✅ .app + codesign (dmg pending) | ✅ MSI via `crosspack pack` | ✅ APK via `rake build:android` (debug-signed) |
 | `positron package` | ✅ | ✅ (`.app`; `MACOS_SIGN_IDENTITY`, `MACOS_BUNDLE_ID`) | ❌ (use `crosspack pack`) | ❌ (use `rake build:android`) |
 
@@ -224,7 +236,7 @@ there — WKWebView consumes file drops with no public hook). Legend: ✅ works 
 | Host Abstraction | `src/positron/host.cr` | Shared dispatch/bind logic + `emit_to_js` |
 | Application API | `src/positron/application.cr` | `on_ready`, lifecycle, deep links, permissions |
 | Desktop Host | `src/positron/desktop_host.cr` | Wires WebView, tray, commands, EventBus |
-| Mobile Host | `src/positron/mobile_host.cr` | Base for Android/iOS host integration |
+| Mobile Host | `src/positron/mobile_host.cr` | Base for Android host integration |
 | Linux EventLoop | `src/positron/event_loop/linux.cr` | GTK main loop + Crystal fiber idle source |
 | macOS EventLoop | `src/positron/event_loop/macos.cr` | `[NSApp run]` + CFRunLoopTimer fiber tick |
 | Dev Asset Server | `src/positron/dev/asset_server.cr` | Serve frontend from disk + live reload |
@@ -246,8 +258,10 @@ there — WKWebView consumes file drops with no public hook). Legend: ✅ works 
 | macOS ObjC Layer | `src/positron/adapters/macos/objc.cr` | Pure-Crystal Objective-C runtime bindings |
 | macOS WebView Adapter | `src/positron/adapters/macos/webview.cr` | WKWebView + NSWindow, bridge, URI schemes |
 | macOS Tray Adapter | `src/positron/adapters/macos/tray.cr` | NSStatusBar / NSStatusItem |
-| Android Host (stub) | `src/positron/adapters/android/host.cr` | Mobile host placeholder |
-| iOS Host (stub) | `src/positron/adapters/ios/host.cr` | Mobile host placeholder |
+| Android Host | `src/positron/adapters/android/host.cr` | JNI host over the Activity shim |
+| iOS ObjC Layer | `src/positron/adapters/ios/objc.cr` | Pure-Crystal Objective-C runtime bindings (UIKit) |
+| iOS WebView Adapter | `src/positron/adapters/ios/webview.cr` | WKWebView + UIWindow, bridge, URI schemes |
+| iOS EventLoop | `src/positron/event_loop/ios.cr` | `UIApplicationMain` + CFRunLoopTimer fiber tick |
 
 ## Requirements
 
@@ -544,10 +558,15 @@ src/
         host.cr
         icon.cr
         factory.cr
-      ios/                               # iOS mobile host (stub)
-        host.cr
+      ios/                               # iOS adapters (WKWebView in a
+        objc.cr                          #   UIWindow; objc.cr is the ObjC
+        webview.cr                       #   runtime layer, UIKit flavour)
+        tray.cr                          #   tray = no-op port
         icon.cr
         factory.cr
+ios/                                    # iOS simulator pipeline: driver
+  main.c                                #   (crystal_main_entry), Info.plist,
+  build_ios.sh                          #   cross-compile + bundle + launch
 examples/
   hello.cr                               # Demo entry point
   hello/

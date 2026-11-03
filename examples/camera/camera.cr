@@ -8,11 +8,17 @@ require "../../src/positron"
 # a secure context, while pages loaded with `load_html` have an opaque
 # origin and expose no `navigator.mediaDevices` at all.
 #
-# Capture itself is plain web API (`getUserMedia` / `enumerateDevices`
-# / `applyConstraints`); the host's part is granting the WebView's
-# permission requests — see the WebKitGTK `permission-request` handler
-# in the Linux adapter. Every grant is broadcast back as
-# `permission.requested`, which the frontend logs live.
+# Capture comes in two flavours, picked at runtime:
+#   - web (`getUserMedia` / `enumerateDevices` / `applyConstraints`) —
+#     the host's part is granting the WebView's permission requests
+#     (see the WebKitGTK `permission-request` handler in the Linux
+#     adapter; every grant is broadcast as `permission.requested` and
+#     logged live below);
+#   - native (the camera plugin, real on iOS) — the host captures
+#     in-process through AVFoundation and the frontend pulls frames
+#     over this `app://` scheme (`/native-frame`, 12-byte header +
+#     RGBA). WKWebView runs getUserMedia in XPC processes the app
+#     cannot reach, so on iOS this is the only working path.
 class CameraDemoApp < Positron::Application
   # The frontend tree, "/"-rooted. `embed_directory` paths resolve from
   # the compiler's working directory (the repo root, like `rake
@@ -20,6 +26,10 @@ class CameraDemoApp < Positron::Application
   embed_directory "examples/camera/frontend"
   # Icon accessors (icon_source etc.) for the window and tray.
   embed_application_files(__DIR__, "../../assets/crystal-icon")
+
+  def configure_plugins
+    use Positron::Plugins::Camera
+  end
 
   def on_ready
     webview.register_uri_scheme("app") do |path|
@@ -43,6 +53,7 @@ class CameraDemoApp < Positron::Application
   # --- embedded frontend serving (app:// scheme) ---
 
   private def serve_app_file(path : String) : Positron::SchemeResponse?
+    return serve_native_frame if path == "/native-frame"
     path = "/index.html" if path.blank? || path == "/"
     bytes = embedded_file?(path) || return nil
 
@@ -70,6 +81,24 @@ class CameraDemoApp < Positron::Application
     snapshot = host.try(&.state_manager.snapshot)
     return facade.hydrate_js(JSON.parse("{}").as_h) unless snapshot
     facade.hydrate_js(snapshot)
+  end
+
+  # Latest native-capture frame: 12-byte header (magic "PRFA" +
+  # u32 LE width/height) + RGBA bytes. Empty body = no frame yet (the
+  # frontend keeps polling).
+  private def serve_native_frame : Positron::SchemeResponse?
+    camera = plugins["camera"]?.as?(Positron::Plugins::Camera)
+    return Positron::SchemeResponse.new(Bytes.empty, "application/octet-stream") unless camera
+
+    if frame = camera.adapter.latest_frame
+      header = Positron::Plugins::Camera.frame_header(frame[:width], frame[:height])
+      bytes = Bytes.new(header.size + frame[:bytes].size)
+      header.copy_to(bytes)
+      frame[:bytes].copy_to(bytes + header.size)
+      Positron::SchemeResponse.new(bytes, "application/octet-stream")
+    else
+      Positron::SchemeResponse.new(Bytes.empty, "application/octet-stream")
+    end
   end
 
   private def mime_for(path : String) : String

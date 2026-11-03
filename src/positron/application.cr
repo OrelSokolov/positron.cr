@@ -355,44 +355,52 @@ module Positron
     # needed. Pair with `Positron::Dev.enabled?` (POSITRON_DEV=1) to
     # switch between serving and embedded assets in one binary.
     def serve_directory(dir : String, fallback_path : String = "/index.html") : String
-      host_ref = -> { host }
-      server = Dev::AssetServer.new(
-        File.expand_path(dir),
-        fallback_path: fallback_path,
-        runtime_provider: -> {
-          facade = Positron::JSFacadeGenerator.new(plugins.to_a)
-          [facade.runtime_js, facade.hydrate_js(host_ref.call.state_manager.snapshot)]
-        },
-      ) do
-        h = host_ref.call
-        h.run_on_main { h.eval_js("location.reload()") }
-      end
-      server.start
-      @dev_asset_server = server
+      {% if flag?(:ios) %}
+        raise "serve_directory is desktop-only; iOS apps embed their assets (embed_directory)"
+      {% else %}
+        host_ref = -> { host }
+        server = Dev::AssetServer.new(
+          File.expand_path(dir),
+          fallback_path: fallback_path,
+          runtime_provider: -> {
+            facade = Positron::JSFacadeGenerator.new(plugins.to_a)
+            [facade.runtime_js, facade.hydrate_js(host_ref.call.state_manager.snapshot)]
+          },
+        ) do
+          h = host_ref.call
+          h.run_on_main { h.eval_js("location.reload()") }
+        end
+        server.start
+        @dev_asset_server = server
 
-      # Regenerate TypeScript bindings so the frontend editor picks up
-      # new plugin and app commands on every dev start.
-      begin
-        bindings = Positron::BindingsGenerator.new(plugins.to_a, self).typescript
-        File.write(File.join(File.expand_path(dir), "positron.d.ts"), bindings)
-      rescue ex
-        Log.warn { "bindings generation failed: #{ex.message}" }
-      end
+        # Regenerate TypeScript bindings so the frontend editor picks up
+        # new plugin and app commands on every dev start.
+        begin
+          bindings = Positron::BindingsGenerator.new(plugins.to_a, self).typescript
+          File.write(File.join(File.expand_path(dir), "positron.d.ts"), bindings)
+        rescue ex
+          Log.warn { "bindings generation failed: #{ex.message}" }
+        end
 
-      server.base_url
+        server.base_url
+      {% end %}
     end
 
-    @dev_asset_server : Dev::AssetServer?
+    {% unless flag?(:ios) %}
+      @dev_asset_server : Dev::AssetServer?
+    {% end %}
     @command_manifest_list = {} of String => CommandManifest
 
     # Run the application.
     #
-    # On desktop this creates the DesktopHost and starts the event loop.
-    # On mobile the native shim owns the lifecycle; calling run() is an error.
+    # On desktop and iOS this creates the DesktopHost and starts the
+    # event loop (on iOS UIApplicationMain owns the loop from there).
+    # On Android the native shim owns the lifecycle; calling run() is
+    # an error.
     def run
       configure_plugins
-      {% if flag?(:android) || flag?(:ios) %}
-        raise "Do not call Application.run on mobile; the native shim owns the lifecycle"
+      {% if flag?(:android) %}
+        raise "Do not call Application.run on Android; the native shim owns the lifecycle"
       {% else %}
         DesktopHost.new(self).run
       {% end %}

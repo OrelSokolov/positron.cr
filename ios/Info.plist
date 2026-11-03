@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>${APP_DISPLAY_NAME}</string>
+  <key>CFBundleExecutable</key>
+  <string>${APP_EXECUTABLE}</string>
+  <key>CFBundleIdentifier</key>
+  <string>${APP_BUNDLE_ID}</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>${APP_DISPLAY_NAME}</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+  <!-- getUserMedia (camera demo): WKWebView grants the capture
+       permission through its WKUIDelegate; on a real device the
+       OS-level TCC prompt additionally requires these keys. -->
+  <key>NSCameraUsageDescription</key>
+  <string>Camera preview for the Positron demo</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Microphone access for the Positron demo</string>
+  <!-- Without UILaunchScreen UIKit falls back to legacy 320x480 pt
+       geometry (verified in the egui.cr iOS port). An empty dict is
+       enough. -->
+  <key>UILaunchScreen</key>
+  <dict/>
+</dict>
+</plist>

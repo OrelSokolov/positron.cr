@@ -9,9 +9,9 @@ runs in the OS WebView; Crystal owns all state and logic; the native
 shim (GTK/WebKitGTK on Linux) is a passive adapter. Assets embed at
 compile time into a single binary.
 
-Currently a **Linux + macOS (arm64) + Windows + Android (arm64)
-reference implementation** of the Host-Shim pattern described in
-`positron-architecture.md`: Linux
+Currently a **Linux + macOS (arm64) + Windows + Android (arm64) + iOS
+(simulator, arm64) reference implementation** of the Host-Shim pattern
+described in `positron-architecture.md`: Linux
 uses GTK/WebKitGTK, macOS uses WKWebView/NSWindow/NSStatusItem through a
 pure-Crystal Objective-C runtime layer (`adapters/macos/objc.cr` — see the
 header comment there for the dispatch-strategy constraints of Crystal's
@@ -24,7 +24,17 @@ plain-Java Activity + android.webkit.WebView shim with a pure-Crystal
 JNI layer (`adapters/android/jni.cr`, §7 of the architecture doc); the
 C seam `android/positron_shim.c` owns the host thread and the
 Java-thread→Crystal queue. The Android plugin adapters are partially
-real (clipboard, theme, display, preferences, lifecycle).
+real (clipboard, theme, display, preferences, lifecycle). iOS follows
+the **desktop** model, not the Android one: Crystal owns the main
+thread, `EventLoop::IOS#run` hands the process to `UIApplicationMain`
+and the WKWebView adapters (`adapters/ios/`) are a port of the macOS
+WebKit machinery (own ObjC layer with UIKit links, no shim/queue); the
+build reuses the patched-Crystal iOS toolchain from egui.cr
+(`ios/build_ios.sh`). The iOS plugin adapters are stubs except the
+camera plugin (`plugins/camera/ios.cr`) — a real in-process AVFoundation
+bridge (WKWebView's getUserMedia runs in XPC processes no injection
+reaches, so the host captures itself and the frontend pulls frames over
+the app's custom URI scheme; see `ios/README.md`).
 `README.md` carries a status checklist (done vs missing) — keep it in sync
 with the actual state when features land.
 
@@ -42,6 +52,12 @@ rake build:examples
 # Needs: SDK with NDK 25.2, build-tools 34+, platform 34, JDK,
 # rsvg-convert or ImageMagick
 rake build:android
+
+# Build the hello example for the iOS simulator (arm64, install+launch)
+# Needs: Xcode (license accepted, DEVELOPER_DIR exported), the patched
+# Crystal iOS toolchain + sim libs from ~/egui.cr/tmp (see
+# ios/build_ios.sh header), a working host homebrew crystal
+rake build:ios
 
 # macOS only: wrap the camera example into a .app bundle (camera
 # capture needs a bundled NSCameraUsageDescription — see below).
@@ -145,10 +161,18 @@ src/positron/
   adapters/android/     # pure-Crystal JNI layer (jni.cr), LibShim
                         # bindings, WebViewPort over the Java bridge,
                         # the mobile Host routing shim events
+  adapters/ios/         # WKWebView in a UIWindow through a UIKit-
+                        # flavoured pure-Crystal ObjC runtime layer
+                        # (objc.cr); tray is a no-op port; WKUIDelegate
+                        # grants getUserMedia (works in the simulator
+                        # with SimulatorCamera's injection dylib)
 android/                # APK pipeline: PositronActivity.java (WebView +
                         # PositronBridge executor), positron_shim.c (C
                         # seam: global refs, event queue, asset
                         # roundtrip), build_android.sh, manifest
+ios/                    # iOS simulator pipeline: main.c (driver calling
+                        # crystal_main_entry), Info.plist, build_ios.sh
+                        # (cross-compile + link + bundle + simctl)
   plugins/              # clipboard, deep_links, dialogs, display,
                         # file_picker, filesystem, keyboard, lifecycle,
                         # logger, notifications, permissions,
