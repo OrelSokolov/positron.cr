@@ -12,6 +12,17 @@
 #                  libgc.a (bdwgc, GC_DARWIN_THREADS) and
 #                  libpcre2-8.a (pcre2, no JIT)
 #                  (default ~/egui.cr/tmp/ios)
+#
+#   libgc MUST be built with -Denable_large_config=ON (MAX_ROOT_SETS
+#   8192 instead of the default 2048). Boehm's dyld callback registers
+#   the __DATA/__bss sections of every loaded image; a simulator app
+#   under recent runtimes sits at ~1500 root sets at idle and ~1900
+#   once WebKit warms up, so the first runtime dlopen that crosses
+#   2048 (e.g. DataDetectorsUILibrary, soft-linked by UIKit's text
+#   edit menu) aborts with "Too many root sets" (SIGABRT from
+#   GC_add_roots_inner). Rebuild with:
+#     cmake -S <bdwgc> -B <bdwgc>/build-ios-sim -Denable_large_config=ON
+#     cmake --build <bdwgc>/build-ios-sim --target gc
 #   Xcode          DEVELOPER_DIR is exported below; xcode-select may
 #                  point at CommandLineTools
 #
@@ -118,6 +129,7 @@ cc -O2 -target "arm64-apple-ios${DEPLOYMENT_TARGET}-simulator" -isysroot "$SDK" 
   "$IOS_LIBDIR/bdwgc/build-ios-sim/libgc.a" \
   -liconv -lz \
   -framework UIKit -framework Foundation -framework WebKit \
+  -framework UniformTypeIdentifiers \
   -framework CoreFoundation -framework CoreGraphics \
   -framework CoreMedia -framework CoreVideo \
   -o "$BUILD/$APP_EXECUTABLE"

@@ -6,7 +6,7 @@ module Positron::Plugins
   # This is a thin FFI wrapper: the Crystal Host drives the dialog,
   # GTK just renders the native save chooser and returns the target path.
   class LinuxSaveFileDialogAdapter < SaveFileDialogAdapter
-    def save(suggested_name : String) : String?
+    def save(suggested_name : String, content : String) : String?
       dialog = LibGTK.gtk_file_chooser_dialog_new(
         "Save file",
         Pointer(Void).null,

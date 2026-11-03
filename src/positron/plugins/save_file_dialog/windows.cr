@@ -8,7 +8,7 @@ module Positron::Plugins
   class WindowsSaveFileDialogAdapter < SaveFileDialogAdapter
     include ::Positron::Adapters::Windows # Win32 FFI bindings
 
-    def save(suggested_name : String) : String?
+    def save(suggested_name : String, content : String) : String?
       buffer = Slice(UInt16).new(32768)
       units = Win32.wstr(suggested_name)
       buffer[0, units.size].copy_from(units) unless suggested_name.empty?

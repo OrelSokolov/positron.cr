@@ -12,7 +12,9 @@ module Positron::Plugins
 
     NS_MODAL_RESPONSE_OK = 1
 
-    def save(suggested_name : String) : String?
+    # `content` is unused here: the panel only picks the target path and
+    # the plugin writes the file after #save returns.
+    def save(suggested_name : String, content : String) : String?
       OBJC.with_autorelease_pool do
         App.ensure_app
 

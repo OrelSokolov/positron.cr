@@ -12,20 +12,6 @@ module Positron::Plugins
 
     NS_MODAL_RESPONSE_OK = 1
 
-    # Common MIME types → file extensions, for the `accept` filter.
-    MIME_EXTENSIONS = {
-      "text/plain"       => ["txt"],
-      "text/*"           => ["txt", "md"],
-      "text/markdown"    => ["md"],
-      "image/*"          => ["png", "jpg", "jpeg", "gif", "webp", "tiff"],
-      "image/png"        => ["png"],
-      "image/jpeg"       => ["jpg", "jpeg"],
-      "image/gif"        => ["gif"],
-      "image/webp"       => ["webp"],
-      "image/tiff"       => ["tiff"],
-      "application/json" => ["json"],
-    }
-
     def pick(accept : String) : String?
       OBJC.with_autorelease_pool do
         App.ensure_app
@@ -36,7 +22,7 @@ module Positron::Plugins
         OBJC.send1(panel, OBJC.sel("setCanChooseDirectories:"), OBJC.bool_arg(false))
         OBJC.send1(panel, OBJC.sel("setAllowsMultipleSelection:"), OBJC.bool_arg(false))
 
-        extensions = self.class.extensions_for(accept)
+        extensions = FilePickerAdapter.extensions_for(accept)
         unless extensions.empty?
           OBJC.send1(panel, OBJC.sel("setAllowedFileTypes:"), nsarray_of_strings(extensions))
         end
@@ -53,24 +39,6 @@ module Positron::Plugins
     end
 
     # --- Internals ---
-
-    # Translates an HTML <input type="file"> accept attribute into file
-    # extensions (".txt,.md" → ["txt","md"], "image/*" → common image
-    # types). "*" and an empty value mean no filtering. Exposed for specs.
-    def self.extensions_for(accept : String) : Array(String)
-      extensions = [] of String
-      accept.split(",").each do |raw|
-        item = raw.strip.downcase
-        next if item.empty? || item == "*"
-
-        if item.starts_with?('.')
-          extensions << item[1..] unless item.size == 1
-        else
-          MIME_EXTENSIONS[item]?.try { |list| extensions.concat(list) }
-        end
-      end
-      extensions.uniq
-    end
 
     private def nsarray_of_strings(strings : Array(String)) : Void*
       array = OBJC.send0(OBJC.cls("NSMutableArray"), OBJC.sel("array"))

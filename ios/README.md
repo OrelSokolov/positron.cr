@@ -48,3 +48,22 @@ variant per run). The optional permission pre-check is therefore
 skipped in `plugins/camera/ios.cr`; iOS raises the TCC prompt at
 device-input creation anyway, so capture on a real device is not
 affected.
+
+## Boehm GC static-root filter (`ios/main.c`)
+
+UIKit soft-links many frameworks lazily (`dlopen` on first use), and
+bdwgc's `GC_dyld_image_add` registers the writable data of every
+loaded image as GC roots. In the simulator that piles up ~1500 root
+segments at boot plus several hundred per lazy-load cascade, which
+exhausted bdwgc's `MAX_ROOT_SETS` and aborted the process ("Too many
+root sets" in `GC_add_roots_inner`) the first time a WKWebView text
+selection menu loaded `DataDetectorsUILibrary`. `main()` therefore
+installs a `GC_has_static_roots` callback (before `crystal_main_entry`
+— it must precede the first allocation) that accepts only the main
+executable's own image. No Crystal object can be referenced from a
+system framework's static data: the adapters keep the Crystal side of
+every ObjC callback in class variables of the main image. Measured
+effect: 1510 → 3 root segments, ~36 MB → ~0.9 MB scanned static roots
+per collection. If you ever move late-bound Crystal code into a
+separately dlopen'ed library, extend `positron_gc_root_filter` to
+accept that image's path too.

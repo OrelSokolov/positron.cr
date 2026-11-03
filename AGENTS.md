@@ -34,7 +34,24 @@ build reuses the patched-Crystal iOS toolchain from egui.cr
 camera plugin (`plugins/camera/ios.cr`) — a real in-process AVFoundation
 bridge (WKWebView's getUserMedia runs in XPC processes no injection
 reaches, so the host captures itself and the frontend pulls frames over
-the app's custom URI scheme; see `ios/README.md`).
+the app's custom URI scheme; see `ios/README.md`) — and save_file_dialog
+(`plugins/save_file_dialog/ios.cr`) — a real UIDocumentPickerViewController
+export-mode port (content staged to a temp file, `asCopy:YES` copies it
+to the picked destination; #save blocks the run_on_main caller in a
+nested default-mode run loop until the delegate IMP fires) — and
+file_picker (`plugins/file_picker/ios.cr`) — a real
+UIDocumentPickerViewController opening-mode port (`asCopy:YES` stages
+a readable copy in the app container; `accept` maps to UTTypes with a
+`UTType.data` fallback; same nested run loop). The easy four are
+real ports too: theme (`UITraitCollection` dark mode +
+`UIAccessibilityDarkerSystemColorsEnabled`), display (`UIScreen`
+bounds/nativeBounds/maximumFramesPerSecond), preferences (the whole
+map as one JSON string through NSUserDefaults) and clipboard
+(`UIPasteboard` text/images, no file entries by design). Still stubs:
+dialogs and notifications. iOS-plugin
+IMP proc literals are assigned inside methods, never as class-body
+initializers — the patched iOS Crystal (1.20.2) loses block locals in
+class-var initializer procs (the egui.cr `tray_darwin.cr` pattern).
 `README.md` carries a status checklist (done vs missing) — keep it in sync
 with the actual state when features land.
 
@@ -56,7 +73,9 @@ rake build:android
 # Build the hello example for the iOS simulator (arm64, install+launch)
 # Needs: Xcode (license accepted, DEVELOPER_DIR exported), the patched
 # Crystal iOS toolchain + sim libs from ~/egui.cr/tmp (see
-# ios/build_ios.sh header), a working host homebrew crystal
+# ios/build_ios.sh header — libgc must be built with
+# -Denable_large_config=ON, else runtime dlopns abort with
+# "Too many root sets" in the simulator), a working host homebrew crystal
 rake build:ios
 
 # macOS only: wrap the camera example into a .app bundle (camera
@@ -70,6 +89,15 @@ rake spec
 
 # Build the positron CLI into bin/
 rake build:cli
+
+# Build + install + launch an example in the iOS simulator
+# (every example works; bundle id cr.positron.<name>)
+rake run:ios:hello
+rake run:ios:camera
+
+# Build + install + launch hello on a connected Android device/emulator
+# (Linux-hosted APK pipeline — see android/build_android.sh)
+rake run:android:hello
 
 # Build a single example
 crystal build examples/hello/hello.cr -o examples/hello/hello

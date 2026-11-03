@@ -163,8 +163,12 @@ What is already there ✔ and what is still needed ☐:
       JS bridge + custom URI schemes via WKScriptMessageHandler /
       WKURLSchemeHandler IMPs, UIKit lifecycle forwarded to
       `Application#on_lifecycle`; builds on the patched-Crystal iOS
-      toolchain from egui.cr (see `ios/build_ios.sh`); plugin adapters
-      stay stubs (same set as Android minus the implemented ones)
+      toolchain from egui.cr (see `ios/build_ios.sh`); iOS plugin
+      adapters: camera (in-process AVFoundation), save_file_dialog
+      (UIDocumentPickerViewController export mode), file_picker
+      (opening mode), theme (UITraitCollection), display (UIScreen),
+      preferences (NSUserDefaults) and clipboard (UIPasteboard) are
+      real; dialogs and notifications stay stubs
 
 ## Android
 

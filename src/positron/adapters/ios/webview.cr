@@ -129,6 +129,20 @@ module Positron
           !@wk_view.nil?
         end
 
+        # Presents a UIKit view controller modally over the app window
+        # (used by plugin adapters, e.g. UIDocumentPickerViewController).
+        # Returns false when there is no booted window / root view
+        # controller to present from.
+        def present_modal(view_controller : Void*) : Bool
+          return false unless window = @window
+          root = ObjC.send0(window, ObjC.sel("rootViewController"))
+          return false if root.null?
+          # NULL completion handler is explicitly allowed.
+          ObjC.send3(root, ObjC.sel("presentViewController:animated:completion:"),
+            view_controller, ObjC.bool_arg(true), Pointer(Void).null)
+          true
+        end
+
         def load_url(url : String)
           after_boot do
             request = ObjC.send1(

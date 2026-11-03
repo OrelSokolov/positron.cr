@@ -8,7 +8,20 @@ module Positron::Plugins
   abstract class SaveFileDialogAdapter
     # Open the save dialog pre-filled with `suggested_name`.
     #
+    # `content` is the payload the caller wants to save. Desktop adapters
+    # (GTK, AppKit, Win32) only return a path and let the plugin write the
+    # file afterwards, so they may ignore `content`; system-picker
+    # platforms where the OS performs the copy (iOS export mode) must
+    # stage `content` BEFORE the picker is shown — see #writes_content?.
+    #
     # Returns the path chosen by the user or `nil` if cancelled.
-    abstract def save(suggested_name : String) : String?
+    abstract def save(suggested_name : String, content : String) : String?
+
+    # True when #save has already persisted `content` to the returned
+    # path (the OS picker performed the copy), so the plugin must not
+    # write the file again. False by default.
+    def writes_content? : Bool
+      false
+    end
   end
 end

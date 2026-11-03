@@ -25,7 +25,11 @@ rescue LoadError
     require "bundler/setup"
     require "taskforge"
     TASKFORGE_AVAILABLE = true
-  rescue LoadError, Gem::Exception
+  # StandardError (not just LoadError/Gem::Exception): a stale bundler
+  # setup can also raise e.g. Bundler::LockfileError when the lockfile
+  # was written by a newer bundler than the running ruby has — the
+  # sequential fallback must survive that too.
+  rescue StandardError
     TASKFORGE_AVAILABLE = false
   end
 end
@@ -134,6 +138,42 @@ end
 
 desc "Build all examples (alias for build:examples)"
 task examples: "build:examples"
+
+# --- run:<platform>:<example> — build + install + launch on a device ---
+#
+# iOS (simulator): every example runs — the plugin factories all have
+# iOS branches (real adapters or stubs), verified by building the whole
+# matrix. Bundle ids are per-example (cr.positron.<name>), so several
+# examples can coexist in the simulator.
+#
+# Android: only hello is wired for running — the APK pipeline is
+# Linux-hosted (NDK toolchain path, see android/build_android.sh) and
+# hello is the example it is validated against in CI.
+namespace :run do
+  namespace :ios do
+    example_names.each do |name|
+      desc "Build, install and launch '#{name}' in the iOS simulator"
+      task name do
+        env = {
+          "APP_BUNDLE_ID" => "cr.positron.#{name}",
+          "APP_DISPLAY_NAME" => name.split("_").map(&:capitalize).join(" "),
+        }
+        sh(env, "ios/build_ios.sh examples/#{name}/#{name}.cr")
+      end
+    end
+  end
+
+  namespace :android do
+    desc "Build, install and launch 'hello' on the connected Android device/emulator"
+    task :hello do
+      sh "android/build_android.sh"
+      adb = File.join(ENV.fetch("ANDROID_SDK", File.expand_path("~/android-sdk")),
+        "platform-tools", "adb")
+      sh "#{adb} install -r android/positron.apk"
+      sh "#{adb} shell am start -n crystal.positron.hello/com.positron.shim.PositronActivity"
+    end
+  end
+end
 
 desc "Run the test suite"
 task :spec do

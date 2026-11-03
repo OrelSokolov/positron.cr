@@ -115,8 +115,46 @@ project adheres to [Semantic Versioning](https://semver.org/).
   - handler exceptions become `{status: 500, body: {error}}`, unknown
     routes 404 — never a rejected promise.
 
+### Added
+
+- **iOS file picker plugin is real now**: `UIDocumentPickerViewController`
+  in opening mode (`initForOpeningContentTypes:asCopy:`) through the
+  pure-Crystal ObjC layer (`plugins/file_picker/ios.cr`) — the system
+  copies the picked file into the app container, so the plugin reads it
+  without security-scoped resource bookkeeping. The `accept` filter is
+  translated to `UTType`s; no/unknown filter falls back to `UTType.data`
+  (an empty array would leave nothing selectable). The accept→extension
+  table (`extensions_for`) moved from the macOS adapter into the shared
+  `FilePickerAdapter` base; the macOS spec still passes via inheritance.
+  `ios/build_ios.sh` links `UniformTypeIdentifiers` now.
+- **Four more iOS plugin adapters are real**: theme
+  (`UIScreen.traitCollection.userInterfaceStyle` +
+  `UIAccessibilityDarkerSystemColorsEnabled`; no system accent on iOS),
+  display (`UIScreen` list with bounds/nativeBounds scale and
+  `maximumFramesPerSecond`; DPI via the documented `scale * 96`
+  fallback — iOS reports no physical size), preferences (the whole
+  preference map round-trips as one JSON string through
+  `NSUserDefaults`) and clipboard (`UIPasteboard` text and PNG images;
+  no file entries on the iOS pasteboard, mirroring Android). The iOS
+  ObjC layer gained `ObjC::Call#ret_f64` for CGFloat returns.
+  Remaining iOS stubs: dialogs, notifications.
+
 ### Fixed
 
+- iOS simulator: any lazy framework `dlopen` after boot (e.g. UIKit
+  soft-linking `DataDetectorsUILibrary` when a WKWebView text
+  selection menu first appears) crashed the app with SIGABRT —
+  bdwgc's `GC_dyld_image_add` registered every loaded image's
+  writable data as GC roots, and the accumulated sections exhausted
+  `MAX_ROOT_SETS` ("Too many root sets" in `GC_add_roots_inner`;
+  ~1510 root segments at boot, +600 per lazy-load cascade against the
+  2048 cap of the previously installed libgc). `ios/main.c` now
+  installs a `GC_has_static_roots` filter before the Crystal runtime
+  boots so only the main executable's own image is scanned: no Crystal
+  object can be referenced from a system framework's static data (the
+  adapters keep the Crystal side of every ObjC callback in class
+  variables), root segments drop to 3 and the scanned static-root
+  range from ~36 MB to ~0.9 MB.
 - `Host#dispatch` executed the whole command handler inside the GLib
   idle callback — i.e. on the GUI thread — so even a yielding CPU burn
   froze the UI (`Fiber.yield` from inside an idle callback never

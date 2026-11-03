@@ -7,7 +7,7 @@ module Positron::Plugins
   # A real implementation would start `Intent.ACTION_CREATE_DOCUMENT`
   # through the JNI bridge in the Android shim and return the selected URI.
   class AndroidSaveFileDialogAdapter < SaveFileDialogAdapter
-    def save(suggested_name : String) : String?
+    def save(suggested_name : String, content : String) : String?
       Log.for("positron.plugins.save_file_dialog").warn { "Android save file dialog not yet implemented" }
       nil
     end

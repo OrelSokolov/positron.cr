@@ -272,6 +272,13 @@ module Positron
           buffer.value
         end
 
+        # CGFloat / double returns (e.g. UIScreen scale getters).
+        def ret_f64 : Float64
+          buffer = Pointer(Float64).malloc(1)
+          ObjC.send1(@invocation, ObjC.sel("getReturnValue:"), buffer.as(Void*))
+          buffer.value
+        end
+
         def ret_rect : LibObjC::NSRect
           buffer = Pointer(LibObjC::NSRect).malloc(1)
           ObjC.send1(@invocation, ObjC.sel("getReturnValue:"), buffer.as(Void*))
@@ -353,6 +360,7 @@ module Positron
 
       @[Link(framework: "CoreFoundation")]
       lib LibCF
+        fun CFRetain(cf : Void*) : Void*
         fun CFRelease(cf : Void*)
         fun CFRunLoopGetMain : Void*
         fun CFRunLoopStop(run_loop : Void*) : Nil

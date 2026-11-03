@@ -70,7 +70,7 @@ module Positron::Plugins
 
       host.run_on_main do
         begin
-          channel.send(@adapter.save(suggested_name))
+          channel.send(@adapter.save(suggested_name, content))
         rescue ex
           Log.error { "save_file_dialog adapter error: #{ex.message}" }
           channel.send(nil)
@@ -81,7 +81,10 @@ module Positron::Plugins
 
       if path
         begin
-          File.write(path, content)
+          # On platforms whose picker already copied the staged content
+          # (iOS export mode) the file exists — writing again would hit
+          # the sandbox of the destination container.
+          File.write(path, content) unless @adapter.writes_content?
           payload = {path: path, name: File.basename(path)}
 
           host.emit_to_js("save_file_dialog.saved", payload)
