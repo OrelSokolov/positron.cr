@@ -271,6 +271,15 @@ this reference workspace.
 crystal build examples/hello.cr -o examples/hello
 ```
 
+All examples at once — in parallel through
+[taskforge](https://github.com/OrelSokolov/taskforge) (memory-aware
+worker width, per-worker compiler caches):
+
+```bash
+bundle install        # once: sysmonitor + taskforge (GitHub git sources)
+rake build:examples   # ~24 s instead of ~2 min; TASKFORGE_JOBS=N forces width
+```
+
 Or with the bundled compiler:
 
 ```bash

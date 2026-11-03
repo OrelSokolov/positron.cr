@@ -1,10 +1,34 @@
 require "fileutils"
 require "open3"
+require "rbconfig"
 
 EXAMPLES_DIR = File.expand_path("examples", __dir__)
 LOGS_DIR = File.expand_path("logs", __dir__)
 CRYSTAL_CMD = ENV.fetch("CRYSTAL_CMD", "crystal")
 CRYSTAL_FLAGS = ENV.fetch("CRYSTAL_FLAGS", "")
+
+ROOT = File.expand_path(__dir__)
+BUILD_HELPER = File.join(ROOT, "exe", "build-example")
+
+# The parallel pool for `rake build:examples` (memory-aware width,
+# per-worker CRYSTAL_CACHE_DIR) lives in the taskforge gem (>= 0.2.0:
+# entry point is Taskforge.run(commands, dir) with a plain array of
+# shell strings) — see the Gemfile. Plain `rake` picks the bundle up
+# automatically via bundler/setup when `bundle install` has run;
+# without the gem the task falls back to the same helper script run
+# sequentially, so plain checkouts keep working.
+begin
+  require "taskforge"
+  TASKFORGE_AVAILABLE = true
+rescue LoadError
+  begin
+    require "bundler/setup"
+    require "taskforge"
+    TASKFORGE_AVAILABLE = true
+  rescue LoadError, Gem::Exception
+    TASKFORGE_AVAILABLE = false
+  end
+end
 
 def colorize(text, color)
   codes = { green: 32, red: 31, yellow: 33, blue: 34, gray: 90, cyan: 36 }
@@ -19,73 +43,39 @@ def example_names
     .sort
 end
 
+# Runs exe/build-example for one example (build + log + status line).
 def build_example(name)
-  # Use relative paths so the same command works both locally and inside
-  # containerized build environments (e.g. docker run -w /app).
-  source = File.join("examples", name, "#{name}.cr")
-  output = File.join("examples", name, name)
-  log_path = File.join(LOGS_DIR, "#{name}.log")
-
-  unless File.exist?(source)
-    puts colorize("[SKIP] #{name}: source file not found", :yellow)
-    return :skipped
-  end
-
-  FileUtils.mkdir_p(LOGS_DIR)
-  File.write(log_path, "")
-
-  command = "#{CRYSTAL_CMD} build #{CRYSTAL_FLAGS} #{source} -o #{output}"
-  puts colorize("  Building #{name}...", :cyan)
-
-  start_time = Time.now
-  stdout, stderr, status = Open3.capture3(command)
-  elapsed = Time.now - start_time
-
-  File.write(log_path, <<~LOG)
-    Command: #{command}
-    Started: #{start_time}
-    Elapsed: #{elapsed.round(3)}s
-    Exit code: #{status.exitstatus}
-
-    --- stdout ---
-    #{stdout}
-
-    --- stderr ---
-    #{stderr}
-  LOG
-
-  if status.success?
-    puts colorize("  [SUCCESS] #{name} (#{elapsed.round(2)}s)", :green)
-    bundle_macos_media_example(name) if darwin? && name == "camera"
-    :success
-  else
-    puts colorize("  [FAILED]  #{name} (#{elapsed.round(2)}s)", :red)
-    puts colorize("            log: #{log_path}", :gray)
-    :failed
-  end
+  system(RbConfig.ruby, BUILD_HELPER, name)
 end
 
-def darwin?
-  RUBY_PLATFORM.include?("darwin")
-end
-
-# Examples whose TCC-dependent features (camera capture) only work
-# inside a bundled .app (usage keys in Info.plist) — wrapped
-# automatically on macOS after a successful build, with a warning
-# about the bare binary.
-def bundle_macos_media_example(name)
-  app_name = "Positron#{name.capitalize}"
-  binary = File.join("examples", name, name)
-  puts colorize("  Bundling #{name} → builds/macos/#{app_name}.app " \
-                "(macOS camera capture needs a bundled NSCameraUsageDescription)...", :cyan)
-  if system(File.join(__dir__, "scripts", "create_bundle.sh"), binary, app_name)
-    puts colorize("  [WARN] run the demo from the bundle: open builds/macos/#{app_name}.app — " \
-                  "the bare binary inherits the terminal's TCC identity and the OS camera " \
-                  "prompt will never show", :yellow)
-  else
-    puts colorize("  [WARN] bundling failed — the bare examples/#{name}/#{name} will not " \
-                  "get the OS camera permission prompt", :red)
+# Summary from the logs the helper wrote (it truncates each log at the
+# start of a build, so a stale log can never count as a success).
+def examples_summary(names)
+  results = names.to_h do |name|
+    source = File.join("examples", name, "#{name}.cr")
+    log = File.join(LOGS_DIR, "#{name}.log")
+    result =
+      if !File.exist?(source)
+        :skipped
+      elsif File.exist?(log) && File.read(log).match?(/^Exit code: 0$/)
+        :success
+      else
+        :failed
+      end
+    [name, result]
   end
+
+  success = results.count { |_, result| result == :success }
+  failed = results.count { |_, result| result == :failed }
+  skipped = results.count { |_, result| result == :skipped }
+
+  puts "=" * 50
+  puts "Summary: " \
+       "#{colorize("#{success} success", :green)}, " \
+       "#{colorize("#{failed} failed", :red)}, " \
+       "#{colorize("#{skipped} skipped", :yellow)}"
+
+  failed
 end
 
 namespace :build do
@@ -109,24 +99,31 @@ namespace :build do
 end
 
 namespace :build do
-  desc "Build all examples sequentially and write logs to logs/"
+  desc "Build all examples and write logs to logs/ (parallel via taskforge when installed)"
   task :examples do
     puts colorize("Positron — building examples", :blue)
     puts "=" * 50
 
-    results = example_names.to_h { |name| [name, build_example(name)] }
+    names = example_names
+    FileUtils.mkdir_p(LOGS_DIR)
+    # Fresh logs up front: the summary reads them back, so a stale log
+    # from an earlier run must not masquerade as a result.
+    names.each { |name| File.write(File.join(LOGS_DIR, "#{name}.log"), "") }
 
-    success = results.count { |_, result| result == :success }
-    failed = results.count { |_, result| result == :failed }
-    skipped = results.count { |_, result| result == :skipped }
+    if TASKFORGE_AVAILABLE
+      commands = names.map { |name| "#{RbConfig.ruby} #{BUILD_HELPER} #{name}" }
+      begin
+        Taskforge.run(commands, ROOT)
+      rescue Taskforge::Pool::Error => e
+        puts colorize(e.message, :red)
+      end
+    else
+      puts colorize("taskforge not installed — building sequentially " \
+                    "(bundle install enables the parallel pool)", :yellow)
+      names.each { |name| build_example(name) }
+    end
 
-    puts "=" * 50
-    puts "Summary: " \
-      "#{colorize("#{success} success", :green)}, " \
-      "#{colorize("#{failed} failed", :red)}, " \
-      "#{colorize("#{skipped} skipped", :yellow)}"
-
-    exit(failed > 0 ? 1 : 0)
+    exit(1) if examples_summary(names) > 0
   end
 end
 

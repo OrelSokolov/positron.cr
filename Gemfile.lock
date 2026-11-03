@@ -1,0 +1,34 @@
+GIT
+  remote: https://github.com/OrelSokolov/sysmonitor.git
+  revision: ff1778be2bc0fd7fa41f40cd0ab806c618f34310
+  specs:
+    sysmonitor (0.1.0)
+
+GIT
+  remote: https://github.com/OrelSokolov/taskforge.git
+  revision: 3cb0215b78dedac1acdcb1e088cb8ed56684f1ec
+  specs:
+    taskforge (0.2.0)
+      sysmonitor (~> 0.1)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rake (13.4.2)
+
+PLATFORMS
+  ruby
+  x86_64-linux-gnu
+
+DEPENDENCIES
+  rake
+  sysmonitor!
+  taskforge!
+
+CHECKSUMS
+  rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
+  sysmonitor (0.1.0)
+  taskforge (0.2.0)
+
+BUNDLED WITH
+  4.0.0

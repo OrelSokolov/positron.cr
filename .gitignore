@@ -5,6 +5,11 @@
 *.dwarf
 /.env
 
+# Ruby-side build tooling (taskforge pool for rake build:examples)
+/.bundle/
+/vendor/bundle/
+/.taskforge/
+
 # Example binaries (everything inside an example dir except source and frontend)
 /examples/*/**
 !/examples/*/*.cr

@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Builds ONE example (examples/<name>/<name>.cr) as a standalone
+# script — the same build, log format and colored status line the old
+# sequential Rake loop produced. `rake build:examples` runs N of these
+# in parallel through Taskforge::Pool (each worker with its own
+# CRYSTAL_CACHE_DIR); without the gem the Rakefile just runs them one
+# by one. Exit status = build status, so the pool's failure/retry
+# logic sees compile errors.
+
+require "fileutils"
+require "open3"
+
+EXAMPLES_DIR = File.expand_path("../examples", __dir__)
+LOGS_DIR = File.expand_path("../logs", __dir__)
+CRYSTAL_CMD = ENV.fetch("CRYSTAL_CMD", "crystal")
+CRYSTAL_FLAGS = ENV.fetch("CRYSTAL_FLAGS", "")
+
+def colorize(text, color)
+  codes = { green: 32, red: 31, yellow: 33, blue: 34, gray: 90, cyan: 36 }
+  "\e[#{codes[color]}m#{text}\e[0m"
+end
+
+name = ARGV[0] or abort "usage: ruby exe/build-example <name>"
+
+# Use relative paths so the same command works both locally and inside
+# containerized build environments (e.g. docker run -w /app).
+source = File.join("examples", name, "#{name}.cr")
+output = File.join("examples", name, name)
+log_path = File.join(LOGS_DIR, "#{name}.log")
+
+unless File.exist?(source)
+  puts colorize("[SKIP] #{name}: source file not found", :yellow)
+  exit 0
+end
+
+FileUtils.mkdir_p(LOGS_DIR)
+
+command = "#{CRYSTAL_CMD} build #{CRYSTAL_FLAGS} #{source} -o #{output}"
+
+start_time = Time.now
+stdout, stderr, status = Open3.capture3(command)
+elapsed = Time.now - start_time
+
+File.write(log_path, <<~LOG)
+  Command: #{command}
+  Started: #{start_time}
+  Elapsed: #{elapsed.round(3)}s
+  Exit code: #{status.exitstatus}
+
+  --- stdout ---
+  #{stdout}
+
+  --- stderr ---
+  #{stderr}
+LOG
+
+# Examples whose TCC-dependent features (camera capture) only work
+# inside a bundled .app (usage keys in Info.plist) — wrapped
+# automatically on macOS after a successful build, with a warning
+# about the bare binary.
+def bundle_macos_media_example(name)
+  root = File.expand_path("..", __dir__)
+  app_name = "Positron#{name.capitalize}"
+  binary = File.join("examples", name, name)
+  puts colorize("  Bundling #{name} → builds/macos/#{app_name}.app " \
+                "(macOS camera capture needs a bundled NSCameraUsageDescription)...", :cyan)
+  if system(File.join(root, "scripts", "create_bundle.sh"), binary, app_name)
+    puts colorize("  [WARN] run the demo from the bundle: open builds/macos/#{app_name}.app — " \
+                  "the bare binary inherits the terminal's TCC identity and the OS camera " \
+                  "prompt will never show", :yellow)
+  else
+    puts colorize("  [WARN] bundling failed — the bare examples/#{name}/#{name} will not " \
+                  "get the OS camera permission prompt", :red)
+  end
+end
+
+if status.success?
+  puts colorize("  [SUCCESS] #{name} (#{elapsed.round(2)}s)", :green)
+  bundle_macos_media_example(name) if RUBY_PLATFORM.include?("darwin") && name == "camera"
+  exit 0
+else
+  puts colorize("  [FAILED]  #{name} (#{elapsed.round(2)}s)", :red)
+  puts colorize("            log: #{log_path}", :gray)
+  exit 1
+end

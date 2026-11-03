@@ -43,6 +43,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `Plugin#on_ready` widened to accept any `Host` (was `DesktopHost`) —
   required for the Android host to drive the same plugin lifecycle.
 
+- Parallel examples build: `rake build:examples` now runs the
+  per-example builder (`exe/build-example`) through
+  [taskforge](https://github.com/OrelSokolov/taskforge) — a
+  memory-aware worker pool (width from cores + MemAvailable + measured
+  peak compiler RSS, per-worker `CRYSTAL_CACHE_DIR` under
+  `.taskforge/cache/`). `bundle install` enables it; without the gem
+  the task falls back to the same sequential build. `TASKFORGE_JOBS=N`
+  forces the worker count. 13 examples: ~2 min sequential → ~24 s
+  warm / ~51 s cold.
 - Cancellable/pausable background jobs in the async_work DSL:
   - `Positron.async_job { |token| ... }` — async_work plus a shared
     `AsyncWork::Token`: `token.sleep` / `token.checkpoint!` are the

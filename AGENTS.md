@@ -31,7 +31,11 @@ with the actual state when features land.
 ## Build & Test
 
 ```bash
-# Build all examples (writes logs to logs/)
+# Build all examples (writes logs to logs/). Parallel through the
+# taskforge gem when `bundle install` has run (memory-aware worker
+# width, per-worker compiler caches); sequential otherwise.
+# TASKFORGE_JOBS=N forces the worker count.
+bundle install            # once, enables the parallel pool
 rake build:examples
 
 # Build the hello example as an Android APK (arm64, into android/)
