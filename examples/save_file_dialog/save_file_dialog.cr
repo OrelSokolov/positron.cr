@@ -49,4 +49,10 @@ class SaveFileDialogApp < Positron::Application
   end
 end
 
-SaveFileDialogApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(SaveFileDialogApp)
+{% else %}
+  SaveFileDialogApp.new.run
+{% end %}

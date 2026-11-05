@@ -27,7 +27,11 @@ Java-thread→Crystal queue. The Android plugin adapters are real
 (clipboard, theme, display, preferences, lifecycle, file_picker and
 save_file_dialog over the SAF pickers, dialogs over AlertDialog,
 notifications via NotificationManager, permissions via runtime
-permission check/request) — async native roundtrips (SAF picks,
+permission check/request, and camera — camera2 NDK capture in the
+C seam, `plugins/camera/android.cr` pulls frames with
+`latest_frame` over the virtual https host; the OS camera permission
+is requested through the permissions bridge inside
+`AndroidCameraAdapter#start`) — async native roundtrips (SAF picks,
 dialog answers) ride the shim event queue and are completed by
 `Adapters::Android::AsyncBridge` on the GUI fiber; adapters expose
 callback overloads (blocking #pick/#save/#confirm/#prompt would
@@ -84,6 +88,12 @@ rake build:android
 # -Denable_large_config=ON, else runtime dlopns abort with
 # "Too many root sets" in the simulator), a working host homebrew crystal
 rake build:ios
+
+# Build EVERY example for a mobile target (sequential matrix — both
+# pipeline scripts share their build dirs; artifacts fan into
+# builds/android/<name>.apk resp. builds/ios/<name>.app, no launch)
+rake build:android:all
+rake build:ios:all
 
 # macOS only: wrap the camera example into a .app bundle (camera
 # capture needs a bundled NSCameraUsageDescription — see below).
@@ -145,7 +155,9 @@ are flag-gated.
   plugin), rsvg-convert or ImageMagick + appimagetool (packaging)
 - Android (`rake build:android`): Android SDK with NDK 25.2
   (`~/android-sdk/ndk/25.2.9519653`), build-tools 34+, platform
-  android-34, a JDK (javac/keytool; d8 comes from build-tools) and
+  android-34, a JDK (javac/keytool; d8 comes from build-tools; the
+  build script prefers javac <= 17 — javac 21+ emits MethodParameters
+  entries with null names that crash the d8 in build-tools 34) and
   rsvg-convert or ImageMagick (launcher icon). The static Crystal
   runtime libs (`libgc`/`libpcre2-8`/`libevent`, arm64) are vendored
   in `third_party/android/` — see its README.

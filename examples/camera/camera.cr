@@ -14,11 +14,14 @@ require "../../src/positron"
 #     (see the WebKitGTK `permission-request` handler in the Linux
 #     adapter; every grant is broadcast as `permission.requested` and
 #     logged live below);
-#   - native (the camera plugin, real on iOS) — the host captures
-#     in-process through AVFoundation and the frontend pulls frames
-#     over this `app://` scheme (`/native-frame`, 12-byte header +
-#     RGBA). WKWebView runs getUserMedia in XPC processes the app
-#     cannot reach, so on iOS this is the only working path.
+#   - native (the camera plugin, real on iOS and Android) — the host
+#     captures in-process (AVFoundation there, camera2 NDK on Android)
+#     and the frontend pulls frames over this `app://` scheme
+#     (`/native-frame`, 12-byte header + RGBA). WKWebView runs
+#     getUserMedia in XPC processes the app cannot reach, so on iOS
+#     this is the only working path; on Android it is parity for apps
+#     that want frames host-side (the WebView's own getUserMedia works
+#     too — picked at runtime).
 class CameraDemoApp < Positron::Application
   # The frontend tree, "/"-rooted. `embed_directory` paths resolve from
   # the compiler's working directory (the repo root, like `rake
@@ -113,4 +116,10 @@ class CameraDemoApp < Positron::Application
   end
 end
 
-CameraDemoApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(CameraDemoApp)
+{% else %}
+  CameraDemoApp.new.run
+{% end %}

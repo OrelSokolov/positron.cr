@@ -56,4 +56,10 @@ class ClipboardApp < Positron::Application
   end
 end
 
-ClipboardApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(ClipboardApp)
+{% else %}
+  ClipboardApp.new.run
+{% end %}

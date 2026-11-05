@@ -65,4 +65,10 @@ class KeyboardDemoApp < Positron::Application
   end
 end
 
-KeyboardDemoApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(KeyboardDemoApp)
+{% else %}
+  KeyboardDemoApp.new.run
+{% end %}

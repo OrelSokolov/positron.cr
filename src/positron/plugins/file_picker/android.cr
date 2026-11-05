@@ -52,22 +52,6 @@ module Positron::Plugins
       end
     end
 
-    # Translates the `accept` filter into the single MIME type the SAF
-    # intent accepts: bare MIME items pass through, extension items map
-    # through MIME; mixed/unknown filters fall back to */*.
-    def self.mime_for(accept : String) : String
-      mimes = accept.split(",").map do |raw|
-        item = raw.strip.downcase
-        next nil if item.empty? || item == "*"
-        if item.includes?('/')
-          item
-        elsif item.starts_with?('.')
-          MIME[item[1..]]?
-        end
-      end.compact.uniq
-      mimes.size == 1 ? mimes.first : "*/*"
-    end
-
     private def path_from(payload : String) : String?
       parsed = JSON.parse(payload)
       if path = parsed["path"]?.try(&.as_s?)

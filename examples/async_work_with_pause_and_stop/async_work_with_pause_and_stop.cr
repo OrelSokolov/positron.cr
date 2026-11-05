@@ -99,4 +99,10 @@ class PauseStopApp < Positron::Application
   end
 end
 
-PauseStopApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(PauseStopApp)
+{% else %}
+  PauseStopApp.new.run
+{% end %}

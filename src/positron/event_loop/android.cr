@@ -32,6 +32,12 @@ module Positron
       @gui_fiber : Fiber?
 
       def initialize
+        # The GUI fiber is the host thread's main fiber — capture it
+        # HERE, not only in #run: Application#on_ready runs before the
+        # pump starts and its bridge calls (load_url!) must take the
+        # direct path instead of marshalling into a queue that nothing
+        # drains yet.
+        @gui_fiber = Fiber.current
       end
 
       # Register a block drained on every pump tick (the Android host
@@ -73,7 +79,14 @@ module Positron
       end
 
       def gui_thread? : Bool
-        Fiber.current == @gui_fiber
+        # Before #run starts the pump, @gui_fiber is nil — but the
+        # caller is the host thread's root fiber, the very fiber #run
+        # will mark as the GUI fiber (Host#run calls on_ready, which
+        # issues JNI calls, before the pump starts). Treating boot
+        # code as the GUI context keeps those calls inline instead of
+        # marshalling them into a queue nothing drains yet.
+        gui = @gui_fiber
+        gui.nil? || Fiber.current == gui
       end
     end
   end

@@ -138,8 +138,9 @@ What is already there ✔ and what is still needed ☐:
       above). Native camera capture exists for iOS (the camera plugin's
       AVFoundation bridge — WKWebView's `getUserMedia` runs in XPC
       processes, so the host captures in-process and the frontend pulls
-      frames over the app's custom URI scheme; `examples/camera`
-      branches on `camera.supported()`)
+      frames over the app's custom URI scheme) and Android (camera2
+      NDK in the C seam); `examples/camera` branches on
+      `camera.supported()`)
 
 ### Mobile
 
@@ -160,9 +161,13 @@ What is already there ✔ and what is still needed ☐:
       `Adapters::Android::AsyncBridge`), dialogs (AlertDialog;
       confirm/prompt async — the answer arrives as `dialog_result`),
       notifications (NotificationManager + `POST_NOTIFICATIONS` on
-      API 33+, click/action events) and permissions (real runtime
-      permission check/request) — secure_storage stays absent for now
-      (Android Keystore adapter is future work)
+      API 33+, click/action events), permissions (real runtime
+      permission check/request) and camera (camera2 NDK capture in
+      `android/positron_shim.c`: AImageReader + YUV→RGBA with the
+      sensor-orientation fix, frames pulled through the camera
+      plugin's `latest_frame` over the virtual https host) —
+      secure_storage stays absent for now (Android Keystore adapter
+      is future work)
 - [x] iOS simulator host (`rake build:ios`, arm64): WKWebView inside a
       UIWindow through a pure-Crystal ObjC runtime layer (port of the
       macOS adapters), `UIApplicationMain` entered from the event loop,
@@ -221,7 +226,7 @@ there — WKWebView consumes file drops with no public hook). Legend: ✅ works 
 | Devtools | ✅ | ✅ (right-click Inspect / `_inspectElement`) | 🔶 (F12 in dev builds; the window API raises) | 🔶 (debuggable builds) |
 | Drag & drop (`dnd.files`) | ✅ | ❌ (WKWebView consumes drops) | ❌ | ❌ |
 | Media permissions (`getUserMedia`) | ✅ | ✅ (packaged `.app` only — bare binaries get no system prompt) | ✅ | ✅ (WebView grants; OS runtime permissions via the permissions plugin) |
-| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ | 🔶 (clipboard/theme/display/preferences/lifecycle/file_picker/save_file_dialog/dialogs/notifications/permissions real; secure_storage absent — Keystore future work) |
+| All 16 core plugins (clipboard, fs, dialogs, …) | ✅ | ✅ | ✅ | 🔶 (clipboard/theme/display/preferences/lifecycle/file_picker/save_file_dialog/dialogs/notifications/permissions/camera real; secure_storage absent — Keystore future work) |
 | Packaging | ✅ .desktop / AppImage / deb | ✅ .app + codesign (dmg pending) | ✅ MSI via `crosspack pack` | ✅ APK via `rake build:android` (debug-signed) |
 | `positron package` | ✅ | ✅ (`.app`; `MACOS_SIGN_IDENTITY`, `MACOS_BUNDLE_ID`) | ❌ (use `crosspack pack`) | ❌ (use `rake build:android`) |
 

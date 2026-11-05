@@ -2,6 +2,7 @@ require "log"
 require "./async_bridge"
 require "./jni"
 require "./shim"
+require "./tray"
 require "./webview"
 require "../../event_loop/android"
 require "../../mobile/asset_router"
@@ -20,19 +21,28 @@ module Positron
         getter event_loop : EventLoop::Android
         getter asset_router : Mobile::AssetRouter
         getter bridge : LibJNI::JObject
+        getter tray : TrayPort = NullTray.new
         @webview : WebView?
 
         def initialize(app : Application)
           super(app, LibShim.positron_shim_webview, LibShim.positron_shim_activity)
 
-          # From here on we are on the host thread: bind the JVM and
-          # cache the bridge the Java side registered with the shim.
-          JNI.vm = LibShim.positron_shim_vm
+          # From here on we are on the host thread: cache the bridge
+          # the Java side registered with the shim (JNI.instance
+          # verifies the seam attached this thread before boot).
+          LibShim.positron_jni_attached
           @bridge = LibShim.positron_shim_bridge
           @event_loop = EventLoop::Android.new
           @asset_router = Mobile::AssetRouter.new
           @webview = WebView.new(self)
           @event_loop.on_tick { drain_shim_events }
+          # JNI Java-method calls must run on the GUI fiber's stack
+          # (see jni.cr's fiber note): route them through run_on_main
+          # when a dispatch fiber calls in.
+          Positron::Adapters::Android::JNI.instance.configure_dispatcher(
+            -> { @event_loop.gui_thread? },
+            ->(block : ->) { @event_loop.run_on_main { block.call } }
+          )
         end
 
         # The WebView port exists from the end of #initialize on; the
@@ -81,6 +91,7 @@ module Positron
               end
             rescue ex
               # A bad message must never kill the pump.
+              LibShim.positron_shim_log("pump: event error #{ex.class}: #{ex.message}")
               Log.error(exception: ex) { "error handling shim event ##{kind.value}" }
             ensure
               LibShim.positron_shim_free(a.value) if a.value
@@ -164,23 +175,28 @@ module Positron
           @event_loop.stop
         end
 
-        # Answer one pending shouldInterceptRequest roundtrip. No
+        # Answer pending shouldInterceptRequest roundtrips (the shim
+        # queues them FIFO; chromium fires several concurrently). No
         # registered scheme handler → empty 404 (the WebView shows its
         # own error page).
         private def serve_pending_asset : Nil
-          req = LibShim.positron_shim_asset_take
-          return unless req
-
-          path = String.new(LibShim.positron_shim_asset_path(req))
-          response = @asset_router.serve_path(path)
-          if response
-            LibShim.positron_shim_asset_done(req, response.bytes.to_unsafe, response.bytes.size, response.mime_type.to_unsafe)
-          else
-            LibShim.positron_shim_asset_done(req, nil, 0, nil)
+          # One request per iteration; the loop exits when the shim
+          # queue is empty.
+          while (req = LibShim.positron_shim_asset_take)
+            begin
+              path = String.new(LibShim.positron_shim_asset_path(req))
+              response = @asset_router.serve_path(path)
+              if response
+                LibShim.positron_shim_asset_done(req, response.bytes.to_unsafe, response.bytes.size.to_u64, response.mime_type.to_unsafe)
+              else
+                LibShim.positron_shim_asset_done(req, nil, 0, nil)
+              end
+            rescue ex
+              LibShim.positron_shim_log("pump: asset error #{ex.class}: #{ex.message}")
+              Log.error(exception: ex) { "asset request failed: #{ex.message}" }
+              LibShim.positron_shim_asset_done(req, nil, 0, nil)
+            end
           end
-        rescue ex
-          Log.error(exception: ex) { "asset request failed: #{ex.message}" }
-          LibShim.positron_shim_asset_done(req, nil, 0, nil) if req
         end
       end
     end

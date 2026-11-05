@@ -34,7 +34,7 @@ module Positron
         end
 
         def load_url(url : String)
-          bridge_call_void("loadUrl", "(Ljava/lang/String;)V", url)
+          bridge_call_void("loadUrl", "(Ljava/lang/String;)V", rewrite_asset_url(url))
         end
 
         def load_html(html : String, base_url : String? = nil)
@@ -84,10 +84,31 @@ module Positron
           @host.asset_router.register_uri_scheme(scheme) { |path| handler.call(path) }
         end
 
-        private def bridge_call_void(name : String, sig : String, *string_args : String)
+        # `scheme://host/path` → `https://app.positron.local/path` for
+        # schemes registered through #register_uri_scheme (anything
+        # else passes through unchanged): mobile WebViews reject
+        # custom URI schemes, so embedded trees live on the virtual
+        # host the Java shim intercepts. Unlike the Windows port the
+        # scheme-specific authority is dropped — the interceptor
+        # matches the fixed ASSET_HOST and the asset router dispatches
+        # by path alone.
+        private def rewrite_asset_url(url : String) : String
+          scheme = url.split("://", 2)[0]?
+          return url unless scheme && @host.asset_router.scheme_registered?(scheme)
+          rest = url.byte_slice(scheme.size + 3)
+          slash = rest.index('/')
+          path = slash ? rest.byte_slice(slash) : "/"
+          "#{ASSET_HOST}#{path.lchop('/')}"
+        end
+
+        # NOTE: the splat must stay unrestricted — Crystal 1.21 treats
+        # `*string_args : String` as requiring at least one argument,
+        # breaking the zero-arg bridge calls (showWebview etc.).
+        private def bridge_call_void(name : String, sig : String, *string_args)
           bridge = @host.bridge
           jni = Positron::Adapters::Android::JNI.instance
-          jvalues = string_args.map { |s| jni.to_java(s).address.to_i64 }
+          jvalues = Array(Int64).new(string_args.size)
+          string_args.each { |s| jvalues << jni.to_java(s).address.to_i64 }
           jni.call_void(bridge, name, sig, jvalues)
         end
       end

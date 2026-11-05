@@ -56,4 +56,10 @@ class DisplayInfoApp < Positron::Application
   end
 end
 
-DisplayInfoApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(DisplayInfoApp)
+{% else %}
+  DisplayInfoApp.new.run
+{% end %}

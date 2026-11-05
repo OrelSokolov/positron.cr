@@ -103,4 +103,10 @@ class NThreadsApp < Positron::Application
   end
 end
 
-NThreadsApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(NThreadsApp)
+{% else %}
+  NThreadsApp.new.run
+{% end %}

@@ -6,6 +6,9 @@ require "./adapter"
 {% if flag?(:ios) %}
   require "./ios"
 {% end %}
+{% if flag?(:android) %}
+  require "./android"
+{% end %}
 
 module Positron::Plugins
   # Compile-time factory that picks the native camera adapter for the
@@ -14,6 +17,8 @@ module Positron::Plugins
     def self.create : CameraAdapter
       {% if flag?(:ios) %}
         IOSCameraAdapter.new
+      {% elsif flag?(:android) %}
+        AndroidCameraAdapter.new
       {% else %}
         UnsupportedCameraAdapter.new
       {% end %}

@@ -2,10 +2,10 @@
 //   - "web": plain web APIs on top of the host's permission grant
 //     (enumerateDevices, getUserMedia, applyConstraints for the torch).
 //   - "native": the host camera plugin (real on iOS, where WKWebView's
-//     getUserMedia runs in XPC processes no injection can reach) —
-//     start/stop through Positron.camera.*, frames pulled from the
-//     app:// scheme (/native-frame: 12-byte header + RGBA) and drawn
-//     onto a canvas.
+//     getUserMedia runs in XPC processes no injection can reach, and
+//     on Android through the camera2 NDK) — start/stop through
+//     Positron.camera.*, frames pulled from the app:// scheme
+//     (/native-frame: 12-byte header + RGBA) and drawn onto a canvas.
 
 (function () {
   "use strict";
@@ -196,7 +196,7 @@
     if (!nativeRunning || nativeFetching) return;
     nativeFetching = true;
     nativeSeq++;
-    fetch("app://camera/native-frame?n=" + nativeSeq)
+    fetch("native-frame?n=" + nativeSeq)
       .then(function (r) { return r.arrayBuffer(); })
       .then(function (buf) {
         nativeFetching = false;

@@ -40,6 +40,45 @@ project adheres to [Semantic Versioning](https://semver.org/).
     (SharedPreferences, JSON-string values), lifecycle (Activity
     callbacks via `window.focused`/`window.blurred` parity); dialogs
     gained a compile stub.
+  - Android camera adapter (native capture parity with iOS): camera2
+    NDK seam in `android/positron_shim.c` (AImageReader surface +
+    `acquireLatestImage`, YUV_420_888→RGBA with the sensor-orientation
+    fix and front-camera mirror), `plugins/camera/android.cr` binding
+    it through `LibShim` — frames reach the frontend through the
+    camera plugin's `latest_frame` over the virtual https host
+    (`/native-frame`). The OS camera runtime permission is checked and
+    requested through the permissions bridge inside
+    `AndroidCameraAdapter#start` (the answer lands as
+    `permission.result`). `build_android.sh` links `-lcamera2ndk
+    -lmediandk`; the manifest already held `android.permission.CAMERA`.
+  - Three Android port bugs the camera example (the first app to ride
+    the virtual https host end to end) exposed, all verified on an
+    arm64 emulator:
+    - `interceptAsset` passed the compound `text/html; charset=utf-8`
+      MIME straight into `WebResourceResponse` — Chromium does not
+      parse a compound MIME there and rendered the page as plain text.
+      The bare MIME token and the charset now go to the constructor's
+      separate mime/encoding params.
+    - JNI bridge calls from dispatch fibers died with a spurious
+      `java.lang.StackOverflowError`: command handlers run in spawned
+      fibers whose mmap'd stacks sit far from the stack bounds ART
+      recorded for the attached host thread, so the first Java frame
+      tripped the overflow check. `JNI#call_*` now marshal to the GUI
+      fiber through `run_on_main` (blocking on a channel) when invoked
+      from another fiber; `EventLoop::Android` captures the GUI fiber
+      in `#initialize` already so `on_ready`'s `load_url` still takes
+      the direct path.
+    - The asset roundtrip registry was single-slot: concurrent
+      `shouldInterceptRequest` calls (HTML+CSS+JS on parallel WebView
+      IO threads) force-completed still-pending waiters as 404 —
+      stylesheets silently vanished. The C seam now queues requests
+      FIFO and the pump drains the whole queue per tick.
+    - `positron_shim_asset_done` was declared with a `UInt32` length
+      on the Crystal side while the C side takes `size_t` — the upper
+      half of the argument register sometimes carried garbage, turning
+      a 5 KB asset copy into a 4 GB `memcpy` that segfaulted the host
+      (the flaky exit(11) at boot). The binding is `UInt64` now,
+      matching `size_t` exactly.
 - `Plugin#on_ready` widened to accept any `Host` (was `DesktopHost`) —
   required for the Android host to drive the same plugin lifecycle.
 

@@ -267,11 +267,16 @@ module Positron
 
         # `app://rest` -> `https://app.positron.local/rest` for
         # registered schemes; anything else passes through unchanged.
+        # A scheme-specific authority (`app://camera/index.html`) is
+        # dropped: the virtual host is per-scheme and handlers are
+        # "/"-rooted against the embedded tree.
         private def rewrite_scheme_url(url : String) : String
           scheme = url.split(":", 2)[0]?
           return url unless scheme && @scheme_handlers.has_key?(scheme)
           rest = url.byte_slice(scheme.size + 1).lchop("//")
-          "https://#{scheme}#{VHOST_SUFFIX}/#{rest}"
+          slash = rest.index('/')
+          rest = slash ? rest.byte_slice(slash) : "/"
+          "https://#{scheme}#{VHOST_SUFFIX}#{rest}"
         end
 
         # INVOKE_FN (UI thread, inside the message pump): map the virtual

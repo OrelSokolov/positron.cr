@@ -57,4 +57,10 @@ class SystemNotificationsApp < Positron::Application
   end
 end
 
-SystemNotificationsApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(SystemNotificationsApp)
+{% else %}
+  SystemNotificationsApp.new.run
+{% end %}

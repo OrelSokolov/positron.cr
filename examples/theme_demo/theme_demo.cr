@@ -27,4 +27,10 @@ class ThemeDemoApp < Positron::Application
   end
 end
 
-ThemeDemoApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(ThemeDemoApp)
+{% else %}
+  ThemeDemoApp.new.run
+{% end %}

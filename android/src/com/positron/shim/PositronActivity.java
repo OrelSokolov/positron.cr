@@ -321,10 +321,21 @@ public class PositronActivity extends Activity {
                     new ByteArrayInputStream(new byte[0]));
         }
         String mime = nativeAssetMime(path);
+        // Chromium wants the bare MIME token with the encoding as a
+        // separate constructor param — a "type; charset=..." compound is
+        // not parsed and the page renders as plain text.
+        String encoding = null;
         if (mime == null) {
             mime = "application/octet-stream";
+        } else {
+            int semi = mime.indexOf(';');
+            if (semi >= 0) {
+                encoding = mime.substring(semi + 1)
+                        .replace("charset=", "").trim();
+                mime = mime.substring(0, semi).trim();
+            }
         }
-        return new WebResourceResponse(mime, null, new ByteArrayInputStream(bytes));
+        return new WebResourceResponse(mime, encoding, new ByteArrayInputStream(bytes));
     }
 
     static String jsonEscape(String s) {

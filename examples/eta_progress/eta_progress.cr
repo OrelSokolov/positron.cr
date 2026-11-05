@@ -61,4 +61,10 @@ class EtaProgressApp < Positron::Application
   end
 end
 
-EtaProgressApp.new.run
+{% if flag?(:android) %}
+  # Mobile: the native shim owns the lifecycle; register the app for
+  # the host thread boot (see src/positron/entry/android.cr).
+  Positron::EntryAndroid.app(EtaProgressApp)
+{% else %}
+  EtaProgressApp.new.run
+{% end %}
